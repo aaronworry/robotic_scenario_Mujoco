@@ -1,0 +1,152 @@
+<mujoco model="2Dspiral">
+    <compiler angle="radian"/>
+    <option gravity="0 0 0"/><!--重力设置  例"0 0 -9.81"代表"x y z"-->
+    <default>
+        <default class="freej">
+            <joint type="free" damping="0" armature="0" limited="false"/>
+        </default>
+    </default>
+    <asset>
+        <!--导入模型-->
+        <mesh name="1" file="disc.stl" scale="1  1  1"/>
+        <mesh name="2" file="disc.stl" scale="1  1  1"/>
+        <mesh name="3" file="disc.stl" scale="1  1  1"/>
+
+
+
+        <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="512" height="512"
+                 mark="cross" markrgb=".8 .8 .8"/>
+        <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+        <material name="matplane" reflectance="0.3" texture="texplane" texrepeat="1 1" texuniform="true"/>
+    </asset>
+    <worldbody>
+        <!-- 地面 -->
+        <geom name="ground" type="plane" size="10 10 1" pos="0 0 0" quat="1 0 0 0" material="matplane" condim="1"/>
+        <!-- 光源 -->
+        <light pos="1 0.5 0.7" dir="-1 -0.5 -1" directional="true" castshadow="false" diffuse="0.4 0.4 0.4"
+               specular="0.1 0.1 0.1"/>
+        <!-- 运动捕获体（固定点）-->
+        <body name="mocapt" mocap="true" pos="0 0 0">
+            <geom type="box" group="1" size="0.001 0.005 0.005" contype="0" conaffinity="0" rgba=".5 .5 .5 1"/>
+        </body>
+
+        <!--基座圆盘，固定-->
+        <body name="B0" pos="0           0         0">
+
+            <geom type="mesh" mesh="1" name="1" pos="0 0 0" euler="0 0 0" rgba="1 1 1 0.5"/>
+            <inertial pos="0 0 0" mass="0.01" diaginertia="0.001 0.001 0.001"/>
+            <!--左右两根tendon的作用点-->
+            <site name="s0_L" pos="-0.02           0    0" size="0.001       0.001       0.001"/>
+            <site name="s0_R" pos="0.02           0    0" size="0.001       0.001       0.001"/>
+
+
+            <!--在两个圆盘间增添球铰链和平移副（弹簧），参考以下形式-->
+            <!-- 第11个球铰链 -->
+            <body name="hinge11" pos="0 0 0.02"><!--定义一个刚体，位置相对0.02-->
+                <inertial pos="0 0 0" mass="0.001" diaginertia="0.0001 0.0001 0.0001"/>
+                <!--定义两个相互垂直的旋转副（分别绕x,y轴，由axis定义），在hinge11下方0.01，即B0与hinge11中点，该铰链连接B0和hinge11。-->
+                <joint name="x11" type="hinge" pos="0 0 -0.01" axis="1 0 0" limited="true" range="-0.824       0.824"
+                       stiffness="0.21111211121" damping="0.075164441"/>
+                <joint name="y11" type="hinge" pos="0 0 -0.01" axis="0 1 0" limited="true" range="-0.824       0.824"
+                       stiffness="0.21111211121"
+                       damping="0.075164441"/><!--range：角度（弧度），stiffness：旋转刚度，damping：旋转阻尼。球铰链轴向为刚性连接-->
+                <geom type="sphere" size="0.002" rgba="1 1 0 1" pos="0 0 -0.01"/>
+
+                <body name="slide11" pos="0 0 0.02">
+                    <inertial pos="0 0 0" mass="0.001" diaginertia="0.0001 0.0001 0.0001"/>
+                    <joint name="slide_joint11" type="slide" pos="0 0 -0.01" limited="true" stiffness="135.7212422121"
+                           damping="0.32121212321" range="-0.501 0.501"/>
+                    <geom type="cylinder" size="0.002 0.005" rgba="1 0 1 1" pos="0 0 -0.01"/>
+
+
+                    <!-- 第12个球铰链 -->
+                    <body name="hinge12" pos="0 0 0.02">
+                        <inertial pos="0 0 0" mass="0.001" diaginertia="0.0001 0.0001 0.0001"/>
+                        <joint name="x12" type="hinge" pos="0 0 -0.01" axis="1 0 0" limited="true" range="-0.824       0.824"
+                               stiffness="0.21111211121" damping="0.075164441"/>
+                        <joint name="y12" type="hinge" pos="0 0 -0.01" axis="0 1 0" limited="true" range="-0.824       0.824"
+                               stiffness="0.21111211121" damping="0.075164441"/>
+                        <geom type="sphere" size="0.002" rgba="1 1 0 1" pos="0 0 -0.01"/>
+
+                        <body name="slide12" pos="0 0 0.02">
+                            <inertial pos="0 0 0" mass="0.001" diaginertia="0.0001 0.0001 0.0001"/>
+                        <joint name="slide_joint12" type="slide" pos="0 0 -0.01" limited="true" stiffness="135.7212422121"
+                               damping="0.32121212321" range="-0.501 0.501"/>
+                        <geom type="cylinder" size="0.002 0.005" rgba="1 0 1 1" pos="0 0 -0.01"/>
+
+                            <!--增添圆盘参考以下结构-->
+                            <body name="B1" pos=" 0 0 0.02">
+                                <joint name="x1" type="hinge" pos="0 0 -0.01" axis="1 0 0" limited="true" range="-0.824       0.824"
+                                    stiffness="0.21111211121" damping="0.075164441"/>
+                                <joint name="y1" type="hinge" pos="0 0 -0.01" axis="0 1 0" limited="true" range="-0.824       0.824"
+                                    stiffness="0.21111211121" damping="0.075164441"/><!--定义铰链，该球铰链连接hinge12和B1-->
+                                <geom type="mesh" mesh="2" name="2" pos="0 0 0" euler="0 0 0"
+                                      rgba="1 1 1 0.5"/><!--画出圆盘-->
+                                <geom type="sphere" size="0.002" rgba="1 1 0 1" pos="0 0 -0.01"/><!--画出球铰-->
+                                <inertial pos="0 0 0" mass="0.01" diaginertia="0.001 0.001 0.001"/>
+                                <site name="s1_L" pos="-0.02          0    0" size="0.001  0.001  0.001"/>
+                                <site name="s1_R" pos="0.02          0    0" size="0.001  0.001  0.001"/>
+
+                                <!-- 第21个球铰链 -->
+                                <body name="hinge21" pos="0 0 0.02">
+                                    <inertial pos="0 0 0" mass="0.001" diaginertia="0.0001 0.0001 0.0001"/>
+                                    <joint name="x21" type="hinge" pos="0 0 -0.01" axis="1 0 0" limited="true" range="-0.824       0.824"
+                                        stiffness="0.21111211121" damping="0.075164441"/>
+                                    <joint name="y21" type="hinge" pos="0 0 -0.01" axis="0 1 0" limited="true" range="-0.824       0.824"
+                                        stiffness="0.21111211121" damping="0.075164441"/>
+
+                                    <body name="slide21" pos="0 0 0.02">
+                                        <inertial pos="0 0 0" mass="0.001" diaginertia="0.0001 0.0001 0.0001"/>
+                                        <joint name="slide_joint21" type="slide" pos="0 0 -0.01" limited="true"
+                                               stiffness="135.7212422121" damping="0.32121212321" range="-0.501 0.501"/>
+                                        <geom type="cylinder" size="0.002 0.005" rgba="1 0 1 1" pos="0 0 -0.01"/>
+
+
+                                        <!-- 第22个球铰链 -->
+                                        <body name="hinge22" pos="0 0 0.02">
+                                            <inertial pos="0 0 0" mass="0.001" diaginertia="0.0001 0.0001 0.0001"/>
+                                            <joint name="x22" type="hinge" pos="0 0 -0.01" axis="1 0 0" limited="true" range="-0.824       0.824"
+                                                stiffness="0.21111211121" damping="0.075164441"/>
+                                            <joint name="y22" type="hinge" pos="0 0 -0.01" axis="0 1 0" limited="true" range="-0.824       0.824"
+                                                stiffness="0.21111211121" damping="0.075164441"/>
+                                            <geom type="sphere" size="0.002" rgba="1 1 0 1" pos="0 0 -0.01"/>
+
+                                            <body name="slide2" pos="0 0 0.02">
+                                                <joint name="slide_joint22" type="slide" pos="0 0 -0.01" limited="true"
+                                                       stiffness="135.7212422121" damping="10.112121212321"
+                                                       range="-0.101 0.101"/>
+                                                <geom type="cylinder" size="0.002 0.005" rgba="1 0 1 1"
+                                                      pos="0 0 -0.01"/>
+
+
+                                                <body name="B2" pos=" 0 0 0.02">
+                                                    <joint name="x2" type="hinge" pos="0 0 -0.01" axis="1 0 0" limited="true" range="-0.824       0.824"
+                                                        stiffness="0.21111211121" damping="0.075164441"/>
+                                                    <joint name="y2" type="hinge" pos="0 0 -0.01" axis="0 1 0" limited="true" range="-0.824       0.824"
+                                                        stiffness="0.21111211121" damping="0.075164441"/>
+                                                    <geom type="mesh" mesh="3" name="3" pos="0 0 0" euler="0 0 0"
+                                                          rgba="1 1 1 0.5"/>
+                                                    <geom type="sphere" size="0.002" rgba="1 1 0 1" pos="0 0 -0.01"/>
+                                                    <inertial pos="0 0 0" mass="0.01" diaginertia="0.001 0.001 0.001"/>
+                                                    <site name="s2_L" pos="-0.02          0    0"
+                                                          size="0.001  0.001  0.001"/>
+                                                    <site name="s2_R" pos="0.02          0    0"
+                                                          size="0.001  0.001  0.001"/>
+
+                                                </body>
+                                            </body>
+                                        </body>
+                                    </body>
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+
+    <equality>
+        <weld body1="mocapt" body2="B0" solref="0.01 1" solimp=".9 .9 0.01"/>
+    </equality>
+</mujoco>
