@@ -18,6 +18,7 @@ class BaseEnv(gym.Env):
 
     def __init__(
             self,
+            model_path,
             frame_skip,
             observation_space: Space,
             render_mode: Optional[str] = None,
@@ -26,13 +27,14 @@ class BaseEnv(gym.Env):
             camera_id: Optional[int] = None,
             camera_name: Optional[str] = None,
     ):
+        
         if model_path.startswith("/"):
             self.fullpath = model_path
         else:
             self.fullpath = path.join(path.dirname(__file__), "../assets", model_path)
         if not path.exists(self.fullpath):
             raise OSError(f"File {self.fullpath} does not exist")
-
+        
         self._initialize_simulation()
 
         
@@ -49,12 +51,15 @@ class BaseEnv(gym.Env):
             "single_rgb_array",
             "single_depth_array",
         ]
+        
+        
         assert (
                 int(np.round(1.0 / self.dt)) == self.metadata["render_fps"]
         ), f'Expected value: {int(np.round(1.0 / self.dt))}, Actual value: {self.metadata["render_fps"]}'
-
+        
+        
         self.observation_space = observation_space
-        self._set_action_space()
+        # self._set_action_space()
 
         self.render_mode = render_mode
         render_frame = partial(
