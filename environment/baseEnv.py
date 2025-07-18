@@ -18,7 +18,6 @@ class BaseEnv(gym.Env):
 
     def __init__(
             self,
-            model_path,
             frame_skip,
             observation_space: Space,
             render_mode: Optional[str] = None,
@@ -36,8 +35,7 @@ class BaseEnv(gym.Env):
 
         self._initialize_simulation()
 
-        self.init_qpos = self.data.qpos.ravel().copy()
-        self.init_qvel = self.data.qvel.ravel().copy()
+        
         self._viewers = {}
 
         self.frame_skip = frame_skip
@@ -89,6 +87,7 @@ class BaseEnv(gym.Env):
         This method is called when the viewer is initialized.
         Optionally implement this method, if you need to tinker with camera position and so forth.
         """
+        pass
 
     def _initialize_simulation(self):
         """

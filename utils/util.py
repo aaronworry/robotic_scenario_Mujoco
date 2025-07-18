@@ -2,6 +2,7 @@ import os
 import time
 import glob, shutil
 from pathlib import Path
+from casadi import *
 
 
 def save_log(train_id):
@@ -36,3 +37,29 @@ def print_info():
     from inspect import currentframe, getframeinfo
     frame_info = getframeinfo(currentframe())
     print(frame_info.filename, frame_info.lineno)
+    
+    
+def quat2angle(q):
+    return 2.0 * math.acos(q[0]) * np.sign(q[-1])
+    
+
+# converter to quaternion from (radian angle, direction)
+def angle_dir_to_quat(angle, dir):
+    if type(dir) == list:
+        dir = np.array(dir)
+    dir = dir / np.linalg.norm(dir)
+    quat = np.zeros(4)
+    quat[0] = math.cos(angle / 2)
+    quat[1:] = math.sin(angle / 2) * dir
+    return quat
+    
+
+
+wb = SX.sym('wb', 3)
+wb_cqm = vertcat(
+    horzcat(0, -wb[0], -wb[1], -wb[2]),
+    horzcat(wb[0], 0, wb[2], -wb[1]),
+    horzcat(wb[1], -wb[2], 0, wb[0]),
+    horzcat(wb[2], wb[1], -wb[0], 0),
+)
+csd_conjquatmat_wb_fn = Function('csd_conjquatmat_wb_fn', [wb], [wb_cqm])
