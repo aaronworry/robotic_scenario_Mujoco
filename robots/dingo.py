@@ -1,10 +1,14 @@
 import numpy as np
 from robots.baseChassis import Chassis
-from controller.chassis_controller import MecanumDriven
+from controller.chassis_controller import MecanumController
 
 class Dingo(Chassis):
-    def __init__(self, position, orientation, velocity, parameters, whether_in_simulator = True):
+    def __init__(self, position, orientation, velocity, parameters):
         super().__init__(position, orientation, velocity)
+        
+        """
+        parameters can get from xml or urdf
+        """
         
         self.height = parameters[height]
         self.width = parameters[width]
@@ -13,13 +17,11 @@ class Dingo(Chassis):
         self.wheel_distance_length = parameters[wheel_distance_length]
         self.mass = parameters[mass]
         
-        self.controller = self._set_controller(whether_in_simulator)
+        self.controller = self._set_controller()
         
-    def _set_controller(self, whether_in_simulator):
-        if whether_in_simulator:
-            return MecanumDriven(self.wheel_distance_width, self.wheel_distance_length)
-        else:
-            return None
+    def _set_controller(self):
+            return MecanumController(self.wheel_distance_width, self.wheel_distance_length)
+
         
     def check_collision_point(self, point):
         point_ref = point - self.position

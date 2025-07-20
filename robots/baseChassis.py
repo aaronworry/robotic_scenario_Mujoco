@@ -28,8 +28,9 @@ class Chassis():
         return self.target_position, self.target_orientation, self.target_velocity
 
     
-    def step(self, action, dt):
-        self.position, self.orientation, self.velocity = self.controller.run(self.position, self.orientation, self.velocity, action, dt)
+    def ik(self, velocity):
+        action = self.controller.run_ik(velocity)
+        return action
     
     def set_state(self, position, orientation, velocity):
         if self.controller is not None:

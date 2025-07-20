@@ -7,8 +7,6 @@ import numpy as np
 from gym import error, spaces
 from gym.spaces import Space
 
-# Only provide abstract function
-
 class BaseEnv(gym.Env):
     """Superclass for all Env environments."""
     """ Manage the robots and objects in Enviroment."""

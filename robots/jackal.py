@@ -1,9 +1,9 @@
 import numpy as np
 from robots.baseChassis import Chassis
-from controller.chassis_controller import DifferentialDriven
+from controller.chassis_controller import DifferentialController
 
 class Jackal(Chassis):
-    def __init__(self, position, orientation, velocity, parameters, whether_in_simulator = True):
+    def __init__(self, position, orientation, velocity, parameters):
         super().__init__(position, orientation, velocity)
         
         self.height = parameters[height]
@@ -17,7 +17,7 @@ class Jackal(Chassis):
         
     def _set_controller(self, whether_in_simulator):
         if whether_in_simulator:
-            return DifferentialDriven(self.wheel_distance_width, self.wheel_distance_length)
+            return DifferentialController(self.wheel_distance_width, self.wheel_distance_length)
         else:
             return None
         
