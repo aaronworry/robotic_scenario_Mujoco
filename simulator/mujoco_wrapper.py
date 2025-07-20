@@ -7,17 +7,16 @@ import numpy as np
 from gym import error, spaces
 from gym.spaces import Space
 
-from .renderer import Viewer
+from .mujoco_renderer import Viewer
 import mujoco
 
-class BaseEnv(gym.Env):
+class MujocoEnv():
     """Superclass for all MuJoCo environments."""
 
     def __init__(
             self,
             model_path,
             frame_skip,
-            observation_space: Space,
     ):
         
         if model_path.startswith("/"):
@@ -29,6 +28,7 @@ class BaseEnv(gym.Env):
         
         self._initialize_simulation()
         
+        self.render_fps = 10.          # read from file
         
         self._viewers = {}          # view in global and view from sensor
 
@@ -41,8 +41,6 @@ class BaseEnv(gym.Env):
                 int(np.round(1.0 / self.dt)) == self.render_fps
         ), f'Expected value: {int(np.round(1.0 / self.dt))}, Actual value: {self.render_fps}'
         
-        
-        self.observation_space = observation_space
 
 
     # methods to override:

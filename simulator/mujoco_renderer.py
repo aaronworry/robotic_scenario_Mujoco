@@ -47,7 +47,7 @@ class Viewer():
         window_width, _ = glfw.get_window_size(self.window)
         self._scale = framebuffer_width * 1.0 / window_width
 
-        
+        # set callbacks
         
 
         # get viewport
@@ -59,7 +59,7 @@ class Viewer():
         max_geom = 1000
         
         if self.name == "global":
-            # set callbacks
+            
             glfw.set_cursor_pos_callback(self.window, self._cursor_pos_callback)
             glfw.set_mouse_button_callback(self.window, self._mouse_button_callback)
             glfw.set_scroll_callback(self.window, self._scroll_callback)

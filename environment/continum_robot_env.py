@@ -12,18 +12,7 @@ class ContinumRobotEnv(BaseEnv):
     # One Manipulator and One Cube in a plane
     def __init__(self, **config):
     
-        self.metadata = {
-            "render_modes": [
-                "human",
-                "rgb_array",
-                "depth_array",
-                "single_rgb_array",
-                "single_depth_array",
-            ],
-            "render_fps": 10,
-        }
-        
-
+        self.render_fps = 10
         self.frame_skip = 50
 
         # define observation and action space
