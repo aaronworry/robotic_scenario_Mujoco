@@ -46,6 +46,21 @@ class MujocoConnect():
 
         self.default_biasprm = self.model.actuator_biasprm.copy()
         self.default_gainprm = self.model.actuator_gainprm.copy()
+        
+        self.create_environment()
+        
+    def create_environment(self):
+        self.robots_state_dict = {}
+        """
+        key value
+        {robot1_name : {body_names : [], joint_names: [], sensor_names: [], actuator_names: []}, robot2_name : {} }
+        """
+        self.objects_state_dict = []
+        """
+        list
+        [object1_name, object2_name, ]
+        """
+        pass
 
     def step(self) -> None:
         """Perform a simulation step."""

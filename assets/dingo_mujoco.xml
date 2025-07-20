@@ -1,8 +1,8 @@
-<mujoco model="kinova">
+<mujoco model="dingo">
     <include file="world/attributes.xml"/>
     <worldbody>
         <include file="world/world.xml"/>
-        <include file="kinova/gen3_lite.xml"/>
+        <include file="dingo/dingo.xml"/>
     </worldbody>
-    <include file="kinova/attributes.xml"/>
+    <include file="dingo/attributes.xml"/>
 </mujoco>
