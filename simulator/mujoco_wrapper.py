@@ -1,23 +1,32 @@
-from functools import partial
-from os import path
-from typing import Optional
-
-import gym
-import numpy as np
-from gym import error, spaces
-from gym.spaces import Space
-
-from .mujoco_renderer import Viewer
+from __future__ import annotations
+from typing import Literal
+import os
 import mujoco
+import asset as models
+import time
+import re
+from compliant_control.interface.window_commands import WindowCommands
+import glfw
+import numpy as np
 
-class MujocoEnv():
-    """Superclass for all MuJoCo environments."""
+SYNC_RATE = 60
+MODEL = "arm_and_base.xml"
 
-    def __init__(
-            self,
-            model_path,
-            frame_skip,
-    ):
+
+    """
+    @property
+    def end_effector(self) -> np.ndarray:
+        # Get the position of the kinova end_effector.
+        if not self.kinova:
+            return [0, 0, 0]
+        idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "end_effector")
+        return self.data.site_xpos[idx]
+    """
+
+class MujocoConnect():
+    """Provides the mujoco simulation of the robot."""
+
+    def __init__(self, model_path) -> None:
         
         if model_path.startswith("/"):
             self.fullpath = model_path
@@ -26,163 +35,164 @@ class MujocoEnv():
         if not path.exists(self.fullpath):
             raise OSError(f"File {self.fullpath} does not exist")
         
-        self._initialize_simulation()
-        
-        self.render_fps = 10.          # read from file
-        
-        self._viewers = {}          # view in global and view from sensor
-
-        self.frame_skip = frame_skip
-
-        self.viewer = None       # view in global
-
-        
-        assert (
-                int(np.round(1.0 / self.dt)) == self.render_fps
-        ), f'Expected value: {int(np.round(1.0 / self.dt))}, Actual value: {self.render_fps}'
-        
-
-
-    # methods to override:
-    # ----------------------------
-
-    def reset_model(self):
-        """
-        Reset the robot degrees of freedom (qpos and qvel).
-        Implement this in each subclass.
-        """
-        raise NotImplementedError
-
-    def viewer_setup(self):
-        """
-        This method is called when the viewer is initialized.
-        Optionally implement this method, if you need to tinker with camera position and so forth.
-        """
-        pass
-
-    def _initialize_simulation(self):
-        """
-        Initialize MuJoCo simulation data structures mjModel and mjData.
-        """
         self.model = mujoco.MjModel.from_xml_path(self.fullpath)
         self.data = mujoco.MjData(self.model)
+        self.define_robots()
 
-    def _reset_simulation(self):
-        """
-        Reset MuJoCo simulation data structures, mjModel and mjData.
-        """
-        mujoco.mj_resetData(self.model, self.data)
+        self.x0 = self.y0 = self.rotz0 = None
 
-    def _step_mujoco_simulation(self, ctrl, n_frames):
-        """
-        Step over the MuJoCo simulaion.
-        """
-        self.data.ctrl[:] = ctrl
+        self.active = True
+        self.target_mover = TargetMover(self.get_target, self.update_target)
 
-        mujoco.mj_step(self.model, self.data, nstep=n_frames)
+        self.default_biasprm = self.model.actuator_biasprm.copy()
+        self.default_gainprm = self.model.actuator_gainprm.copy()
 
-        # As of MuJoCo 2.0, force-related quantities like cacc are not computed
-        # unless there's a force sensor in the model.
-        # See https://github.com/openai/gym/issues/1541
-        mujoco.mj_rnePostConstraint(self.model, self.data)
+        pref = [np.deg2rad(pos) for pos in Position.pref.position]
+        self.set_ctrl_value("Kinova", "position", pref)
+        self.set_qpos_value("Kinova", "position", pref)
+
+    def step(self) -> None:
+        """Perform a simulation step."""
+        mujoco.mj_step(self.model, self.data)
         
-    def render(self):
-        self._get_viewer("global").render()
+    def define_robots(self) -> None:
+        """Define which robots are simulated."""
+        names = str(self.model.names)
+        self.name = re.search("b'(.*?)\\\\", names)[1]
+        self.kinova = "Kinova" in names
+        self.dingo = "Dingo" in names
         
+    def start(self) -> None:
+        """Start a mujoco simulation."""
+        self.load_window_commands()
+        viewer = mujoco.viewer.launch_passive(
+            self.model, self.data, key_callback=self.key_callback
+        )
+        sync = time.time()
+        while self.active:
+            step_start = time.time()
+            self.step()
+            if time.time() > sync + (1 / SYNC_RATE):
+                viewer.sync()
+                sync = time.time()
+            time_until_next_step = self.model.opt.timestep - (time.time() - step_start)
+            if time_until_next_step > 0:
+                time.sleep(time_until_next_step)
 
-    def get_camera_data(
-            self,
-            name: str = "global",
-    ):
-        """
-        Render a frame from the MuJoCo simulation and get_data.
-        """
-        if name == "rgb":
-            width = 1
-            height = 1
-            data = self._get_viewer(name).read_pixels(width, height, depth=False)
-            return data[::-1, :, :]
-        elif name == "depth":
-            width = 1
-            height = 1
-            data = self._get_viewer(name).read_pixels(width, height, depth=True)[1]
-            return data[::-1, :]
-        elif name == "global":
-            width = self.model.vis.global_.offwidth
-            height = self.model.vis.global_.offheight
-            data = self._get_viewer(name).read_pixels(width, height, depth=False)
-            return data[::-1, :, :]
+    def key_callback(self, key: int) -> None:
+        """Key callback."""
+        if key == 256:
+            self.stop()
 
-    # -----------------------------
+    def stop(self, *args: any) -> None:
+        """Stop the simulation."""
+        self.active = False
 
-    def reset(
-            self,
-            return_info: bool = False,
-    ):
-        self._reset_simulation()
+    def update_target(self, pos: np.ndarray) -> None:
+        """Update the target."""
+        body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "target")
+        self.data.mocap_pos[body_id - 1] = pos
 
-        ob = self.reset_model()
-        if not return_info:
-            return ob
-        else:
-            return ob, {}
+    def reset_target(self) -> None:
+        """Reset the target."""
+        self.update_target(self.end_effector)
 
-    def set_state(self, qpos, qvel):
-        """
-        Set the joints position qpos and velocity qvel of the model. Override this method depending on the MuJoCo bindings used.
-        """
-        assert qpos.shape == (self.model.nq,) and qvel.shape == (self.model.nv,)
-        self.data.qpos[:] = np.copy(qpos)
-        self.data.qvel[:] = np.copy(qvel)
-        if self.model.na == 0:
-            self.data.act[:] = None
-        mujoco.mj_forward(self.model, self.data)
+    def change_mode(self, mode: Literal["position", "torque"], joint: int) -> None:
+        """Change the control mode of the Kinova arm."""
+        idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, f"Kinova_position_{joint}")
+        if mode == "position":
+            self.model.actuator_biasprm[idx][1] = self.default_biasprm[idx][1]
+            self.model.actuator_gainprm[idx][0] = self.default_gainprm[idx][0]
+        elif mode == "torque":
+            self.model.actuator_biasprm[idx][1] = 0
+            self.model.actuator_gainprm[idx][0] = 0
 
-    @property
-    def dt(self):
-        return self.model.opt.timestep * self.frame_skip
+        idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, f"Kinova_velocity_{joint}")
+        if mode == "position":
+            self.model.actuator_biasprm[idx][2] = self.default_biasprm[idx][2]
+            self.model.actuator_gainprm[idx][0] = self.default_gainprm[idx][0]
+        elif mode == "torque":
+            self.model.actuator_biasprm[idx][2] = 0
+            self.model.actuator_gainprm[idx][0] = 0
 
-    def do_simulation(self, ctrl, n_frames):
-        """
-        Step the simulation n number of frames and applying a control action.
-        """
-        # Check control input is contained in the action space
-        if np.array(ctrl).shape != self.action_space.shape:
-            raise ValueError("Action dimension mismatch")
-        self._step_mujoco_simulation(ctrl, n_frames)
+    def get_sensor_feedback(
+        self,
+        robot: Literal["Kinova", "Dingo"],
+        prop: Literal["position", "velocity", "torque"],
+    ) -> list[float]:
+        """Return position, velocity or torque feedback for kinova arm or dingo base."""
+        if robot == "Kinova":
+            actuators = 6
+        elif robot == "Dingo":
+            actuators = 4
 
+        feedback = []
+        for n in range(actuators):
+            idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SENSOR, f"{robot}_{prop}_{n}")
+            feedback.append(self.data.sensordata[idx])
+        return feedback
 
-
-    def close(self):
-        if self.viewer is not None:
-            self.viewer.close()
-        if self.viewer is not None:
-            self.viewer = None
-            self._viewers = {}
-
-    def get_body_com(self, body_name):
-        """Return the cartesian position of a body frame"""
-        return self.data.body(body_name).xpos
-
-    def state_vector(self):
-        """Return the position and velocity joint states of the model"""
-        return np.concatenate([self.data.qpos.flat, self.data.qvel.flat])
-        
-    def _get_viewer(self, name):
-        if name == "global":
-            self.viewer = self._viewers.get("global")
-            if self.viewer is None:
-                self.viewer = Viewer("global", self.model, self.data)
-                self.viewer_setup()
-                self._viewers[name] = self.viewer
-            return self.viewer
-        else:
-            viewer = self._viewers.get(name)
-            if viewer is None:
-                viewer = Viewer(name, self.model, self.data)
-            return viewer
+    def set_ctrl_value(
+        self,
+        robot: Literal["Kinova", "Dingo"],
+        prop: Literal["position", "velocity", "torque"],
+        values: list[float],
+    ) -> None:
+        """Set position, velocity or torque command for kinova arm or dingo base."""
+        for n, value in enumerate(values):
+            idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, f"{robot}_{prop}_{n}")
+            self.data.ctrl[idx] = value
             
-        
+    def set_qpos_value(
+        self,
+        robot: Literal["Kinova", "Dingo"],
+        prop: Literal["position", "velocity"],
+        values: list[float],
+    ) -> None:
+        """Set the joint position or velocity for kinova arm or dingo base."""
+        for n, value in enumerate(values):
+            idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, f"{robot}_{n}")
+            if prop == "position":
+                idpos = self.model.jnt_qposadr[idx]
+                self.data.qpos[idpos] = value
+            elif prop == "velocity":
+                idvel = self.model.jnt_dofadr[idx]
+                self.data.qvel[idvel]
 
+    def set_world_pos_value(
+        self, x: float, y: float, quat_w: float, quat_z: float
+    ) -> None:
+        """Set the world position or for the dingo base."""
+        self.x0 = x if not self.x0 else self.x0
+        self.y0 = y if not self.y0 else self.y0
+        idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, "D_J_B")
+        idpos = self.model.jnt_qposadr[idx]
+        self.data.qpos[idpos] = x - self.x0
+        self.data.qpos[idpos + 1] = y - self.y0
+        self.data.qpos[idpos + 3] = quat_w
+        self.data.qpos[idpos + 6] = quat_z
 
-
+    def ctrl_increment(
+        self,
+        increments: list[float],
+        robot: Literal["Kinova", "Dingo"] = "Kinova",
+        prop: Literal["position", "velocity", "torque"] = "position",
+    ) -> None:
+        """Control increment."""
+        for n, increment in enumerate(increments):
+            idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, f"{robot}_{prop}_{n}")
+            self.data.ctrl[idx] += increment
+            
+            
+    def load_window_commands(self) -> None:
+        """Load the window commands."""
+        glfw.init()
+        window_commands = WindowCommands(1)
+        width, height = glfw.get_video_mode(glfw.get_primary_monitor()).size
+        pose = [int(width / 3), 0, int(width * (2 / 3)), height]
+        window_commands = WindowCommands(1)
+        window_commands.add_window(self.name)
+        window_commands.add_command(["replace", (self.name, *pose)])
+        window_commands.add_command(["key", (self.name, "Tab")])
+        window_commands.add_command(["key", (self.name, "Shift+Tab")])
+        window_commands.start_in_new_thread()

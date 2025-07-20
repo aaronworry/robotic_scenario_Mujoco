@@ -19,7 +19,7 @@ def apply_force(data, force, body_id, site_pos):  # 力的向量（使用force_v
     data.xfrc_applied[body_id, :3] += force
     data.xfrc_applied[body_id, 3:] += torque
 
-class ContinumRobot():
+class ContinumRobot(BaseRobot):
     def __init__(self, model, data, initial_state = None, controller = None):
         
         self.initial_state = initial_state
