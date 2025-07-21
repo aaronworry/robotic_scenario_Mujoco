@@ -1,27 +1,15 @@
 from __future__ import annotations
-from typing import Literal
 import os
 import mujoco
-import asset as models
 import time
-import re
-from compliant_control.interface.window_commands import WindowCommands
+from utils.window_commands import WindowCommands
 import glfw
 import numpy as np
 
 SYNC_RATE = 60
-MODEL = "arm_and_base.xml"
 
 
-    """
-    @property
-    def end_effector(self) -> np.ndarray:
-        # Get the position of the kinova end_effector.
-        if not self.kinova:
-            return [0, 0, 0]
-        idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "end_effector")
-        return self.data.site_xpos[idx]
-    """
+    
 
 class MujocoConnect():
     """Provides the mujoco simulation of the robot."""
@@ -38,7 +26,7 @@ class MujocoConnect():
         self.model = mujoco.MjModel.from_xml_path(self.fullpath)
         self.data = mujoco.MjData(self.model)
         
-        self.world_pos_name = None
+        
 
         self.x0 = self.y0 = self.rotz0 = None
 
@@ -60,6 +48,7 @@ class MujocoConnect():
         list
         [object1_name, object2_name, ]
         """
+        self.world_pos_name = None
         pass
 
     def step(self) -> None:
@@ -96,6 +85,11 @@ class MujocoConnect():
         """Stop the simulation."""
         self.active = False
 
+
+    def get_site_pos(self, name) -> np.ndarray:
+        # what's mjOBJ_SITE?   pos / orientation ?
+        idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, name)
+        return self.data.site_xpos[idx]
 
     def set_body_pos(self, name, pos: np.ndarray) -> None:
         """Update the target."""
@@ -158,8 +152,6 @@ class MujocoConnect():
         self,
         name,
         increment: float,
-        robot: Literal["Kinova", "Dingo"] = "Kinova",
-        prop: Literal["position", "velocity", "torque"] = "position",
     ) -> None:
         """Control increment."""
         idx = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_ACTUATOR, name)

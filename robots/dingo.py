@@ -21,6 +21,16 @@ class Dingo(Chassis):
         
     def _set_controller(self):
             return MecanumController(self.wheel_distance_width, self.wheel_distance_length)
+            
+    def step(self, action, dt):
+        # should be implement in numerical environment (not in silumator, such as Mujoco, Issac, Gazebo, Bullet)
+        control_command = self.controller.run(action)
+        self.forward(control_command, dt)
+        pass
+        
+    def forward(command, dt):
+        # forward kinematic
+        pass
 
         
     def check_collision_point(self, point):

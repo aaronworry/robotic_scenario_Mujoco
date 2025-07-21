@@ -13,7 +13,7 @@ class Target():
     def __init__(self):
         pass
 
-class MobileManipulatorTrackingControl(BaseEnv, MujocoConnect):
+class MobileManipulatorTrackingControlEnv(BaseEnv, MujocoConnect):
     def __init__(self, model_path):
         MujocoConnect.__init__(model_path)
         # define observation and action space
@@ -79,14 +79,6 @@ class MobileManipulatorTrackingControl(BaseEnv, MujocoConnect):
 
     def step(self, current_time, action):
         
-        # 施加的力清零
-        self.data.xfrc_applied.fill(0.0)
-        
-        self.robot.step(current_time, self.data, action)
-
-        # self.renderer.render_step()
-        # mujoco.mj_forward(self.model, self.data)
-        mujoco.mj_step(self.model, self.data)
         
         # 需要将 data 中的值 传输给 机器人对象
         
