@@ -66,9 +66,118 @@ class LSRobotGenerator():
         return self.result
         
     
+class RobotModule2D():
+    # for visualization
+    def __init__(self, params):
+        self.l = params[0]
+        self.le = params[1]
+        self.h = params[2]
+        self.d = params[3]
+        
+        self.position = None
+        self.orientation = None
+        self.init_orientation = None
+        self.init_position = None
+        self.point_matrix = np.zeros((6, 2))
+        self.init_point_matrix = np.zeros((6, 2))
+        
+    def initial_module(self, position, orientation):
+        self.init_point_matrix[0, :] = np.array([0., 0.])
+        self.init_point_matrix[1, :] = np.array([self.h, self.d])
+        self.init_point_matrix[2, :] = np.array([self.h + self.le, self.d])
+        self.init_point_matrix[3, :] = np.array([self.l, 0.])
+        self.init_point_matrix[4, :] = np.array([self.h + self.le, - self.d])
+        self.init_point_matrix[5, :] = np.array([self.h, - self.d])
+        
+        self.init_orientation = orientation / np.linalg.norm(orientation)
+        self.init_position = position
+        
+    def reset(self):
+        self.update(self.init_position, self.init_orientation)
+        
+        
+    def update(self, position, orientation):
+        self.orientation = orientation / np.linalg.norm(orientation)
+        self.position = position
+        theta = np.arctan2(orientation[1], orientation[0])
+        R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+        
+        tran = np.transpose(R @ self.init_point_matrix.T)
+        for i in range(6):
+            self.point_matrix[i, :] = self.position + self.init_point_matrix[i, :]
+        
+            
         
 
+
 class TwoStringContinuumRobot():
-    def __init__(self, trapezoidal_param, taper_angle = np.pi/12):
+    """
+    module are along the x-axis
+    """
+    def __init__(self, trapezoidal_param, delta_theta, y, taper_angle = np.pi/12):
         self.trapezoidal_param = trapezoidal_param
         self.taper_angle = taper_angle
+        self.n = len(self.trapezoidal_param)
+        
+        self.theta_ub = [delta_theta] * self.n
+        self.theta_lb = [-delta_theta] * self.n
+        self.modules = []
+        self.initial_position_matrix = np.zero((self.n, 2))
+        self.initial_theta_list = [0.] * self.n
+        self.position_matrix = np.zero((self.n, 2))
+        self.theta_list = [0.] * self.n
+        
+        # string state
+        self.end_point1 = None
+        self.end_point2 = None
+        self.start_point1 = np.array([0., y])
+        self.start_point2 = np.array([0., -y])
+        
+        self.initialization()
+        
+        
+    def initialization(self):
+        position = np.array([0., 0.])
+        for i in range(self.n):
+            module = RobotModule2D(trapezoidal_param[i, :])
+            module.initial_module(position, np.array([1., 0.]))
+            self.initial_position_matrix[i, :] = position
+            self.initial_theta_list[i] = 0.
+            position[0] += module.l
+            self.modules.append(module)
+            
+    def reset(self):
+        for i in range(self.n):
+            self.modules[i].reset()
+        self.theta_list = self.initial_theta_list
+        self.position_matrix = self.initial_position_matrix
+        
+        
+    def update(self):
+        # for visualization
+        for i in range(self.n):
+            self.modules[i].update(self.position_matrix[i, :], np.array([np.cos(self.theta_list[i]), np.sin(self.theta_list[i])]))
+        
+    
+    def random_control(self):
+        # only for test
+        theta_list = [0.] * self.n
+        for i in range(self.n):
+            theta = np.random.rand(1)[0] * (self.theta_ub[i] - self.theta_lb[i]) + self.theta_lb[i]
+            theta_list[i] = theta
+        return theta_list
+            
+    
+    def forward(self, theta_list):
+        total_theta = 0.
+        for i in range(1, self.n):
+            dtheta = self.theta_list[i-1]
+            total_theta += dtheta
+            length = self.modules[i-1].l
+            self.position_matrix[i, :] = self.position_matrix[i-1, :] + length * np.array([np.cos(total_theta), np.sin(total_theta)])
+        
+        
+    
+        
+        
+        
