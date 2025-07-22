@@ -114,10 +114,12 @@ class TwoStringContinuumRobot():
     """
     module are along the x-axis
     """
-    def __init__(self, trapezoidal_param, delta_theta, y, taper_angle = np.pi/12):
+    def __init__(self, trapezoidal_param, y, taper_angle = np.pi/12):
         self.trapezoidal_param = trapezoidal_param
         self.taper_angle = taper_angle
         self.n = len(self.trapezoidal_param)
+        #                                    h,            d                       l - le - h                  d
+        delta_theta = np.arctan2(trapezoidal_param[0][2], trapezoidal_param[0][3]) + np.arctan2(trapezoidal_param[0][0] - trapezoidal_param[0][1] - trapezoidal_param[0][2], trapezoidal_param[0][3])
         
         self.theta_ub = [delta_theta] * self.n
         self.theta_lb = [-delta_theta] * self.n
