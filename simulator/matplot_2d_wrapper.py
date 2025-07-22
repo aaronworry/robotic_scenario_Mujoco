@@ -6,7 +6,7 @@ from utils.window_commands import WindowCommands
 import glfw
 import numpy as np
 
-
+# plt.draw()  :  改变元素数据，在原图上绘制  后面一般跟 plt.show()
     
 
 class MatplotConnect():
