@@ -199,16 +199,33 @@ class TwoStringContinuumRobot():
         
         self.initialization()
     
-    def intersection(point1, point2, point3, point4):
-        mat_12 = np.array([point1, point2])
-        mat_34 = np.array([point3, point4])
+    def intersection(point1, point2, point3, point4):        
+        """
+            line1 : point1, point2
+            line2: point3, point4
+        """
+        x1,y1 = point1[0], point1[1]
+        x2,y2 = point2[0], point2[1]
+        x3,y3 = point3[0], point3[1]
+        x4,y4 = point4[0], point4[1]
+        A1 = y2 - y1
+        B1 = x1 - x2
+        C1 = A1 * x1 + B1 * y1
         
-        ab = np.linalg.inv(mat_12) @ np.ones((2, 1))
-        cd = np.linalg.inv(mat_34) @ np.ones((2, 1))
-        temp = np.hstack((ab, cd)).T
+        A2 = y4 - y3
+        B2 = x3 - x4
+        C2 = A2 * x3 + B2 * y3
         
-        result = np.linalg.inv(temp) @ np.ones((2, 1))
-        return result[:, 0]
+        denominator = A1 * B2 - A2 * B1
+        if denominator == 0:
+            return None  # The lines are parallel.
+        
+        x = (B2 * C1 - B1 * C2) / denominator
+        y = (A1 * C2 - A2 * C1) / denominator
+        
+        return np.array([x, y])
+
+
     
     def initialization(self):
         position = np.array([0., 0.])
