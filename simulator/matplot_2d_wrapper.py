@@ -2,29 +2,98 @@ from __future__ import annotations
 import os
 from matplotlib import pyplot as plt
 import time
-from utils.window_commands import WindowCommands
-import glfw
 import numpy as np
 
-# plt.draw()  :  改变元素数据，在原图上绘制  后面一般跟 plt.show()
-    
 
 class MatplotConnect():
     """Provides the matplot visualization of the robot."""
+    def __init__(self, X_limit=[-5., 5.], Y_limit=[-5., 5.]):
+    
+        self.xlim = X_limit
+        self.ylim = Y_limit
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111)
+        self.ax.set_xlim([self.xlim[0], self.xlim[1]])
+        self.ax.set_ylim([self.ylim[0], self.ylim[1]])
+        
+        self.dynamic_objects_plot_list = []
+        self.static_objects_plt_list = []
+        
+        
+    def init_static_object(objects, **kwargs):
+        self.drawObjects(objects, dtype="static", **kwargs)
+        
+    
+    def cla(self):
+        for item in self.dynamic_objects_plot_list:
+            item.remove()
+        self.dynamic_objects_plot_list = []
+        
+    def pause(self, time=0.001):
+        plt.pause(time)
+        
+    def show(self, flag=False, visible = True):
+        plt.draw()
+        if not visible:
+            self.ax.grid(None)
+            self.ax.axis("off")
+        
+        if flag:
+            font = FontProperties(fname=r"c:\windows\fonts\times.ttf", size=14)
+            
+            # font.set_family('serif')
+            # font.set_name('Times New Roman')  # Must be installed on your system
+            # font.set_size(14)
+            # font.set_weight('bold')
 
-    def __init__(self) -> None:
-        pass
+            self.ax.set_xlabel("x(m)", fontproperties = myfont)
+            self.ax.set_ylabel("y(m)", fontproperties = myfont)
+            self.ax.set_xticks(np.linspace(self.xlim[0], 1., self.xlim[1]), fontproperties = myfont)
+            self.ax.set_yticks(np.linspace(self.ylim[0], 1., self.ylim[1]), fontproperties = myfont)
+            self.ax.set_xticklabels(np.linspace(self.xlim[0], 1., self.xlim[1]), fontproperties = myfont)
+            self.ax.set_yticklabels(np.linspace(self.ylim[0], 1., self.ylim[1]), fontproperties = myfont)
             
             
-    def load_window_commands(self) -> None:
-        """Load the window commands."""
-        glfw.init()
-        window_commands = WindowCommands(1)
-        width, height = glfw.get_video_mode(glfw.get_primary_monitor()).size
-        pose = [int(width / 3), 0, int(width * (2 / 3)), height]
-        window_commands = WindowCommands(1)
-        window_commands.add_window(self.name)
-        window_commands.add_command(["replace", (self.name, *pose)])
-        window_commands.add_command(["key", (self.name, "Tab")])
-        window_commands.add_command(["key", (self.name, "Shift+Tab")])
-        window_commands.start_in_new_thread()
+            # self.ax.lengend(prof = font)
+            
+            plt.savefig('../figures/result.pdf',dpi=300,bbox_inches = "tight")
+            
+    
+    def add_object(item, **kwargs):
+        """
+        a closet set
+        item = [[point], [point], [point]]:    point_plot
+        item = [point_list, point_list, point_list]:   line_plot
+        """
+        for temp_object in item:
+            if len(temp_object) == 1:
+                plot_item = self.point_plot(temp_object[0], **kwargs)
+            elif len(temp_object) == 2:
+                plot_item = self.line_plot(temp_object[0], temp_object[1], **kwargs)
+                
+            if dtype == "dynamic":
+                self.dynamic_objects_plot_list.append(plot_item)
+            elif dtype == "static":
+                self.static_objects_plt_list.append(plot_item)
+        
+    def drawRobots(self, robots, **kwargs):
+        for robot in robots:
+            self.add_object(robot, **kwargs)
+            
+    def drawObjects(self, objects, **kwargs):
+        for item in objects:
+            self.add_object(item, **kwargs)
+
+    def line_plot(self, point1, point2, marker=',', markersize=1, linewidth=2, linestyle = '-', color="black"):
+        return self.ax.plot([float(point1[0]), float(point2[0])], [float(point1[1]), float(point2[1])], marker=marker, markersize=markersize,  linewidth=linewidth, linestyle=linestyle, color=color)
+        
+
+    def point_plot(self, point, s=10, marker='.', c='red'):
+        return self.ax.scatter(point[0], point[1], c=c, s =s, marker = marker)
+        
+    def render(self, robots, objects, dt):
+        self.cla()
+        self.drawRobots(robots, dtype = "dynamic")
+        self.drawObjects(objects, dtype = "dynamic")
+        self.show()
+        self.pause(dt)
