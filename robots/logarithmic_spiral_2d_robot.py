@@ -182,6 +182,8 @@ class TwoStringContinuumRobot():
         self.initial_theta_list = [0.] * self.n
         self.position_matrix = np.zero((self.n, 2))
         self.theta_list = [0.] * self.n
+        self.intial_orientations = np.zeros((self.n, 2))
+        self.orientations = np.zeros((self.n, 2))
         
         # string state
         self.cable_length_left = 0.
@@ -229,9 +231,10 @@ class TwoStringContinuumRobot():
     
     def initialization(self):
         position = np.array([0., 0.])
+        orientation = np.array([1., 0.])
         for i in range(self.n):
             module = RobotModule2D(trapezoidal_param[i, :])
-            module.initial_module(position, np.array([1., 0.]))
+            module.initial_module(position, orientation)
             
             # intersection must exist
             bottom_right = self.intersection(self.start_point_right, self.end_effector_point, module.init_point_matrix[0], module.init_point_matrix[1])
@@ -241,6 +244,7 @@ class TwoStringContinuumRobot():
             module.initial_cable_point(bottom_left, bottom_right, top_left, top_right)
             
             self.initial_position_matrix[i, :] = position
+            self.initial_orientations[i, :] = orientation
             self.initial_theta_list[i] = 0.
             position[0] += module.l
             self.modules.append(module)
@@ -263,13 +267,14 @@ class TwoStringContinuumRobot():
             self.modules[i].reset()
         self.theta_list = self.initial_theta_list
         self.position_matrix = self.initial_position_matrix
+        self.orientations = self.initial_orientations
         
         
     def update(self):
         left_length = 0.
         right_length = 0.
         for i in range(self.n):
-            self.modules[i].update(self.position_matrix[i, :], np.array([np.cos(self.theta_list[i]), np.sin(self.theta_list[i])]))
+            self.modules[i].update(self.position_matrix[i, :], self.orientations[i, :]))
         
             if i == 0:
                 left_length += np.linalg.norm(start_point_left - self.modules[i].get_bottom_left()) + self.modules[i].cable_inner_length_left
@@ -291,12 +296,15 @@ class TwoStringContinuumRobot():
             
     
     def forward(self, theta_list):
-        total_theta = 0.
+        total_theta = self.theta_list[0]
+        self.position_matrix[0, :] = np.array([0., 0.])
+        self.orientations[0, :] = np.array([np.cos(total_theta), np.sin(total_theta)])
         for i in range(1, self.n):
-            dtheta = self.theta_list[i-1]
-            total_theta += dtheta
             length = self.modules[i-1].l
-            self.position_matrix[i, :] = self.position_matrix[i-1, :] + length * np.array([np.cos(total_theta), np.sin(total_theta)])
+            self.position_matrix[i, :] = self.position_matrix[i-1, :] + length * self.orientations[i-1, :]
+            dtheta = self.theta_list[i]
+            total_theta += dtheta
+            self.orientations[i, :] = np.array([np.cos(total_theta), np.sin(total_theta)])
         
         self.update()
         
