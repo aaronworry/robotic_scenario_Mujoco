@@ -13,7 +13,7 @@ class BaseEnv(gym.Env):
     """Superclass for all Env environments."""
     """ Manage the robots and objects in Enviroment."""
 
-    def __init__(self, robot):
+    def __init__(self):
         """
         observe_space
         action_space

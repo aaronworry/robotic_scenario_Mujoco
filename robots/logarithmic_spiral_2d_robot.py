@@ -188,6 +188,11 @@ class TwoStringContinuumRobot():
         # string state
         self.cable_length_left = 0.
         self.cable_length_right = 0.
+        self.cable_length_left_outer = 0.
+        self.cable_length_right_outer = 0.
+        self.cable_length_left_inner = 0.
+        self.cable_length_right_inner = 0.
+        
         self.cable_length_max_left = 0.
         self.cable_length_min_left = 0.
         self.cable_length_max_right = 0.
@@ -243,6 +248,9 @@ class TwoStringContinuumRobot():
             top_left = self.intersection(self.start_point_left, self.end_effector_point, module.init_point_matrix[4], module.init_point_matrix[3])
             module.initial_cable_point(bottom_left, bottom_right, top_left, top_right)
             
+            self.cable_length_left_inner += module.cable_inner_length_left
+            self.cable_length_right_inner += module.cable_inner_length_right
+            
             self.initial_position_matrix[i, :] = position
             self.initial_orientations[i, :] = orientation
             self.initial_theta_list[i] = 0.
@@ -271,20 +279,20 @@ class TwoStringContinuumRobot():
         
         
     def update(self):
-        left_length = 0.
-        right_length = 0.
+        self.cable_length_left_outer = 0.
+        self.cable_length_right_outer = 0.
         for i in range(self.n):
             self.modules[i].update(self.position_matrix[i, :], self.orientations[i, :]))
-        
             if i == 0:
-                left_length += np.linalg.norm(start_point_left - self.modules[i].get_bottom_left()) + self.modules[i].cable_inner_length_left
-                right_length += np.linalg.norm(start_point_right - self.modules[i].get_bottom_right()) + self.modules[i].cable_inner_length_right
+                self.cable_length_left_outer += np.linalg.norm(start_point_left - self.modules[i].get_bottom_left())
+                self.cable_length_right_outer += np.linalg.norm(start_point_right - self.modules[i].get_bottom_right())
             else:
-                left_length += np.linalg.norm(self.modules[i-1].get_top_left() - self.modules[i].get_bottom_left()) + self.modules[i].cable_inner_length_left
-                right_length += np.linalg.norm(self.modules[i-1].get_top_right() - self.modules[i].get_bottom_right()) + self.modules[i].cable_inner_length_right
-                
-        self.cable_length_left = left_length
-        self.cable_length_right = right_length
+                self.cable_length_left_outer += np.linalg.norm(self.modules[i-1].get_top_left() - self.modules[i].get_bottom_left())
+                self.cable_length_right_outer += np.linalg.norm(self.modules[i-1].get_top_right() - self.modules[i].get_bottom_right())
+            
+            
+        self.cable_length_left = self.cable_length_left_inner + self.cable_length_left_outer
+        self.cable_length_right = self.cable_length_right_inner + self.cable_length_right_outer
     
     def random_control(self):
         # only for test
