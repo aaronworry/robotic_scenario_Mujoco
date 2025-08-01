@@ -316,6 +316,33 @@ class TwoStringContinuumRobot():
         
         self.update()
         
+    
+    def step_v(self, cable_velocity, dt):
+        """
+        控制时，只考虑一条绳提供速度
+        建模时，同时考虑
+        
+        
+        最小作用量原理计算 更新之后的 theta_list
+        
+        min \sum |d \theta|         st  cable_velocity = \sum f(d \theta)            l + cable_velocity * dt = \sum g (d \theta + \theta)
+        ======> 锥规划
+        min \sum z_i
+        s. t.
+            cable_velocity = \sum f(d \theta)
+            l + cable_velocity * dt = \sum g (d \theta + \theta)
+            z_i >= |d \theta_i|
+        
+        """
+        pass
+        
+    
+    
+    def step_f(self, cable_force):
+        pass
+        
+        
+        
         
     
         
