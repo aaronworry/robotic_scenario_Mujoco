@@ -50,7 +50,7 @@ class MobileManipulatorTrackingControlEnv(BaseEnv, MujocoConnect):
         # initial environment
         # load model
         self.initialization()
-        self.reset_model()
+        self.reset()
         
     def initialization(self):
         """
@@ -61,7 +61,7 @@ class MobileManipulatorTrackingControlEnv(BaseEnv, MujocoConnect):
         self.arm = Kinova()
         self.chassis = Dingo()
 
-    def reset_model(self, render = False):
+    def reset(self, render = False):
 
         # robot initialization
         
