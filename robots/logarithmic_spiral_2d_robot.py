@@ -1,4 +1,5 @@
 import numpy as np
+from utils.util import hadamard_sum
 
 
 class LSRobotGenerator():
@@ -121,14 +122,26 @@ class RobotModule2D():
     def get_bottom_left(self):
         return self.cable_point[0]
         
+    def get_bottom_left_iitial(self):
+        return self.init_cable_point[0]
+        
     def get_top_left(self):
         return self.cable_point[1]
+        
+    def get_top_left_initial(self):
+        return self.init_cable_point[1]
         
     def get_top_right(self):
         return self.cable_point[2]
         
+    def get_top_right_initial(self):
+        return self.init_cable_point[2]
+        
     def get_bottom_right(self):
         return self.cable_point[3]
+        
+    def get_bottom_right_initial(self):
+        return self.init_cable_point[3]
         
         
         
@@ -293,6 +306,29 @@ class TwoStringContinuumRobot():
             
         self.cable_length_left = self.cable_length_left_inner + self.cable_length_left_outer
         self.cable_length_right = self.cable_length_right_inner + self.cable_length_right_outer
+        
+    def cable_length_outer(self, theta_list):
+        cable_length_left_outer = 0.
+        cable_length_right_outer = 0.
+        for i in range(self.n):
+            R = np.array([[np.cos(theta_list[i]), -np.sin(theta_list[i])], [np.sin(theta_list[i]), np.cos(theta_list[i])]])
+            if i == 0:
+                A_l_s = self.start_point_left
+                A_r_s = self.start_point_right
+                A_l_1_out_initial = self.modules[i].get_bottom_left_initial()
+                A_r_1_out_initial = self.modules[i].get_bottom_right_initial()
+                cable_length_left_outer += np.linalg.norm(R @ A_l_1_out_initial - A_l_s)
+                cable_length_right_outer += np.linalg.norm(R @ A_r_1_out_initial - A_r_s)
+            else:
+                A_l_i_in = self.modules[i-1].get_top_left_initial()
+                A_r_i_in = self.modules[i-1].get_top_right_initial()
+                A_l_i_out_initial = self.modules[i].get_bottom_left_initial()
+                A_r_i_out_initial = self.modules[i].get_bottom_right_initial()
+                P_i = self.modules[i-1].init_point_matrix[3, :]
+                cable_length_left_outer += np.linalg.norm(R @ A_l_i_out_initial + P_i - A_l_i_in)
+                cable_length_right_outer += np.linalg.norm(R @ A_r_i_out_initial + P_i - A_r_i_in)
+        return np.array([cable_length_left_outer, cable_length_right_outer])
+        
     
     def random_control(self):
         # only for test
@@ -304,18 +340,56 @@ class TwoStringContinuumRobot():
             
     
     def forward(self, theta_list):
-        total_theta = self.theta_list[0]
+        self.theta_list = theta_list
+        total_theta = theta_list[0]
         self.position_matrix[0, :] = np.array([0., 0.])
         self.orientations[0, :] = np.array([np.cos(total_theta), np.sin(total_theta)])
         for i in range(1, self.n):
             length = self.modules[i-1].l
             self.position_matrix[i, :] = self.position_matrix[i-1, :] + length * self.orientations[i-1, :]
-            dtheta = self.theta_list[i]
+            dtheta = theta_list[i]
             total_theta += dtheta
             self.orientations[i, :] = np.array([np.cos(total_theta), np.sin(total_theta)])
         
         self.update()
         
+    def compute_Jacobian(self):
+        """
+        l' = J theta'
+        J_0 = left_cable
+        J_1 = right_cable
+        """
+        J = np.zeros((2, self.n))
+        for i in range(self.n):
+            dR_dq = np.array([[-np.sin(self.theta_list[i]), -np.cos(self.theta_list[i])], [np.cos(self.theta_list[i]), -np.sin(self.theta_list[i])]])
+            if i == 0:
+                A_l_s = self.start_point_left
+                A_r_s = self.start_point_right
+                A_l_1_out = self.modules[i].get_bottom_left()
+                A_r_1_out = self.modules[i].get_bottom_right()
+                A_l_1_out_initial = self.modules[i].get_bottom_left_initial()
+                A_r_1_out_initial = self.modules[i].get_bottom_right_initial()
+                r_l = A_l_1_out - A_l_s
+                r_r = A_r_1_out - A_r_s
+                temp_l =  A_l_1_out_initial @ r_l.T / np.linalg.norm(r_l)
+                temp_r = A_r_1_out_initial @ r_r.T / np.linalg.norm(r_r)
+                J[0][i] = hadamard_sum(temp_l, dR_dq)
+                J[1][i] = hadamard_sum(temp_r, dR_dq)
+            else:
+                R = np.array([[np.cos(self.theta_list[i]), -np.sin(self.theta_list[i])], [np.sin(self.theta_list[i]), np.cos(self.theta_list[i])]])
+                A_l_i_in = self.modules[i-1].get_top_left_initial()
+                A_r_i_in = self.modules[i-1].get_top_right_initial()
+                A_l_i_out = self.modules[i].get_bottom_left_initial()
+                A_r_i_out = self.modules[i].get_bottom_right_initial()
+                P_i = self.modules[i-1].init_point_matrix[3, :]
+                r_l = (R @ A_l_i_out + P_i) - A_l_i_in
+                r_r = (R @ A_r_i_out + P_i) - A_r_i_in
+                temp_l =  A_l_i_out @ r_l.T / np.linalg.norm(r_l)
+                temp_r = A_r_i_out @ r_r.T / np.linalg.norm(r_r)
+                J[0][i] = hadamard_sum(temp_l, dR_dq)
+                J[1][i] = hadamard_sum(temp_r, dR_dq)
+        return J
+    
     
     def step_v(self, cable_velocity, dt):
         """
@@ -334,6 +408,9 @@ class TwoStringContinuumRobot():
             z_i >= |d \theta_i|
         
         """
+        J = self.compute_Jacobian()
+        # cable_velocity = J @ x
+        # l - cable_velocity * dt = g(\theta + x * dt)
         pass
         
     

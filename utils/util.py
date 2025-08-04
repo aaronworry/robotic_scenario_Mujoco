@@ -4,6 +4,14 @@ import glob, shutil
 from pathlib import Path
 from casadi import *
 
+def hadamard_sum(A, B):
+    n = len(A)
+    m = len(A[0])
+    result = 0.
+    for i in range(n):
+        for j in range(m):
+            result += A[i][j] * B[i][j]
+    return result
 
 def save_log(train_id):
     # Copy file to log for version backup
@@ -55,11 +63,3 @@ def angle_dir_to_quat(angle, dir):
     
 
 
-wb = SX.sym('wb', 3)
-wb_cqm = vertcat(
-    horzcat(0, -wb[0], -wb[1], -wb[2]),
-    horzcat(wb[0], 0, wb[2], -wb[1]),
-    horzcat(wb[1], -wb[2], 0, wb[0]),
-    horzcat(wb[2], wb[1], -wb[0], 0),
-)
-csd_conjquatmat_wb_fn = Function('csd_conjquatmat_wb_fn', [wb], [wb_cqm])
