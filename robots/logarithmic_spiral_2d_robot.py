@@ -410,7 +410,9 @@ class TwoStringContinuumRobot():
         """
         J = self.compute_Jacobian()
         # cable_velocity = J @ x
-        # l - cable_velocity * dt = g(\theta + x * dt)
+        # 和下面等效:  但是下面构建优化问题时，需要调用函数，耗时间
+        # self.cable_length_left_outer - cable_velocity * dt = self.cable_length_outer(self.theta_list + x * dt)[0]
+        # self.cable_length_right_outer - cable_velocity * dt = self.cable_length_outer(self.theta_list + x * dt)[1]
         pass
         
     
