@@ -414,15 +414,21 @@ class TwoStringContinuumRobot():
         """
         J = self.compute_Jacobian()
         # cable_velocity = J @ x
-        # 和下面等效:  但是下面构建优化问题时，需要调用函数，耗时间
-        # 对于 [cos -sin         可以考虑构建一个对称矩阵且 R^T R = I 的元素，以略去三角函数     比如 x^T x = 1     [x[0], -x[1]; x[1], x[0]]
-        #     [sin cos ]
-        # self.cable_length_left_outer - cable_velocity * dt = self.cable_length_outer(self.theta_list + x * dt)[0]
-        # self.cable_length_right_outer - cable_velocity * dt = self.cable_length_outer(self.theta_list + x * dt)[1]
-        
+        # 
         # 一个step中可能会调用多次求解器
         #    当角度变换之后被边界条件限制，记录此次的时间，设置边界条件处的mask=1，继续调用求解器
         #    求解的过程中，会出现很多的角速度为0的情况
+        #
+        #
+        # 可以不使用求解器，一般先更新最远处的theta，直至达到极限
+        # Jn qn_dot = l_dot              t1 = (qn_bound - qn) / qn_dot             qn_new = qn_bound
+        # Jn-1 qn-1_dot = l_dot          t2 = (qn-1_bound - qn-1) / qn-1_dot       qn-1_new = qn-1_bound
+        #
+        #
+        # t1 + t2 + ... + tp > dt
+        # 则 tp = dt - t1 - t2 - ...
+        # Jn+1-p  qn+1-p_dot = l_dot        qn+1-p_new =  qn+1-p_dot * tp + qn+1-p
+        
         pass
         
     
