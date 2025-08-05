@@ -1,5 +1,6 @@
 import numpy as np
 from utils.util import hadamard_sum
+from optimizer.continuum_manipulator_velocities_solver import VelocityOptimizer
 
 
 class LSRobotGenerator():
@@ -215,7 +216,10 @@ class TwoStringContinuumRobot():
         self.start_point_left = np.array([0., -y])
         self.start_point_right = np.array([0., y])
         
-        self.end_effector_point = np.array([y / np.tan(self.taper_angle / 2), 0.])
+        self.end_effector_point_left = np.array([y / np.tan(self.taper_angle / 2), 0.])
+        self.end_effector_point_right = np.array([y / np.tan(self.taper_angle / 2), 0.])
+        
+        self.v_opt = VelocityOptimizer(2, self.n, 2)
         
         self.initialization()
     
@@ -255,10 +259,10 @@ class TwoStringContinuumRobot():
             module.initial_module(position, orientation)
             
             # intersection must exist
-            bottom_right = self.intersection(self.start_point_right, self.end_effector_point, module.init_point_matrix[0], module.init_point_matrix[1])
-            bottom_left = self.intersection(self.start_point_left, self.end_effector_point, module.init_point_matrix[0], module.init_point_matrix[5])
-            top_right = self.intersection(self.start_point_right, self.end_effector_point, module.init_point_matrix[2], module.init_point_matrix[3])
-            top_left = self.intersection(self.start_point_left, self.end_effector_point, module.init_point_matrix[4], module.init_point_matrix[3])
+            bottom_right = self.intersection(self.start_point_right, self.end_effector_point_right, module.init_point_matrix[0], module.init_point_matrix[1])
+            bottom_left = self.intersection(self.start_point_left, self.end_effector_point_left, module.init_point_matrix[0], module.init_point_matrix[5])
+            top_right = self.intersection(self.start_point_right, self.end_effector_point_right, module.init_point_matrix[2], module.init_point_matrix[3])
+            top_left = self.intersection(self.start_point_left, self.end_effector_point_left, module.init_point_matrix[4], module.init_point_matrix[3])
             module.initial_cable_point(bottom_left, bottom_right, top_left, top_right)
             
             self.cable_length_left_inner += module.cable_inner_length_left
@@ -400,7 +404,7 @@ class TwoStringContinuumRobot():
         最小作用量原理计算 更新之后的 theta_list
         
         min \sum |d \theta|         st  cable_velocity = \sum f(d \theta)            l + cable_velocity * dt = \sum g (d \theta + \theta)
-        ======> 锥规划
+        ======> 锥规划           acados不支持锥规划
         min \sum z_i
         s. t.
             cable_velocity = \sum f(d \theta)
@@ -411,8 +415,14 @@ class TwoStringContinuumRobot():
         J = self.compute_Jacobian()
         # cable_velocity = J @ x
         # 和下面等效:  但是下面构建优化问题时，需要调用函数，耗时间
+        # 对于 [cos -sin         可以考虑构建一个对称矩阵且 R^T R = I 的元素，以略去三角函数     比如 x^T x = 1     [x[0], -x[1]; x[1], x[0]]
+        #     [sin cos ]
         # self.cable_length_left_outer - cable_velocity * dt = self.cable_length_outer(self.theta_list + x * dt)[0]
         # self.cable_length_right_outer - cable_velocity * dt = self.cable_length_outer(self.theta_list + x * dt)[1]
+        
+        # 一个step中可能会调用多次求解器
+        #    当角度变换之后被边界条件限制，记录此次的时间，设置边界条件处的mask=1，继续调用求解器
+        #    求解的过程中，会出现很多的角速度为0的情况
         pass
         
     
