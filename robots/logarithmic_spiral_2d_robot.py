@@ -399,27 +399,24 @@ class TwoStringContinuumRobot():
         """
         控制时，只考虑一条绳提供速度
         建模时，同时考虑
-        
-        
         最小作用量原理计算 更新之后的 theta_list
-        
-        min \sum |d \theta|         st  cable_velocity = \sum f(d \theta)            l + cable_velocity * dt = \sum g (d \theta + \theta)
-        ======> 锥规划           acados不支持锥规划
+        ======> 锥规划
         min \sum z_i
         s. t.
-            cable_velocity = \sum f(d \theta)
-            l + cable_velocity * dt = \sum g (d \theta + \theta)
+            cable_velocity = J d \theta
             z_i >= |d \theta_i|
         
         """
         J = self.compute_Jacobian()
+        theta_list = self.theta_list
         # cable_velocity = J @ x
         # 
         # 一个step中可能会调用多次求解器
         #    当角度变换之后被边界条件限制，记录此次的时间，设置边界条件处的mask=1，继续调用求解器
-        #    求解的过程中，会出现很多的角速度为0的情况
-        #
-        #
+        #    求解的过程中，会出现很多的角速度为0的情况        x = [0., 0., a, 0., 0., 0.]
+        
+        
+        
         # 可以不使用求解器，一般先更新最远处的theta，直至达到极限
         # Jn qn_dot = l_dot              t1 = (qn_bound - qn) / qn_dot             qn_new = qn_bound
         # Jn-1 qn-1_dot = l_dot          t2 = (qn-1_bound - qn-1) / qn-1_dot       qn-1_new = qn-1_bound
@@ -428,12 +425,32 @@ class TwoStringContinuumRobot():
         # t1 + t2 + ... + tp > dt
         # 则 tp = dt - t1 - t2 - ...
         # Jn+1-p  qn+1-p_dot = l_dot        qn+1-p_new =  qn+1-p_dot * tp + qn+1-p
+        cable_id = 0 if cable_velocity[0] < -1e-8 else 1
+        total_t = dt
+        for i in range(self.n):
+            module_id = self.n - 1 - i
+            q_dot = cable_velocity[cable_id] / J[cable_id, module_id]
+            q_bound = theta_list[module_id]
+            t_temp = 0.
+            if q_dot > 0.:
+                q_bound = self.theta_ub[module_id]
+                t_temp = (q_bound - theta_list[module_id]) / q_dot
+            elif q_dot < 0.:
+                q_bound = self.theta_lb[module_id]
+                t_temp = (q_bound - theta_list[module_id]) / q_dot
+            
+            if t_temp > total_t:
+                theta_list[module_id] += q_dot * total_t
+                break
+            
+            theta_list[module_id] = q_bound
+            total_t -= t_temp
         
-        pass
+        return theta_list
         
     
     
-    def step_f(self, cable_force):
+    def step_f(self, cable_force, dt):
         pass
         
         
