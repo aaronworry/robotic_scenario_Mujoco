@@ -61,6 +61,6 @@ class Chassis():
         """
         based on shape of chassis, judge the collision
         
-        should be implemented in simulation
+        should be implemented in numerical simulation
         """
-        raise NotImplementedError
+        pass

@@ -46,6 +46,12 @@ class BaseManipulator():
         
         raise NotImplementedError
         
+    def ik(self, target_position, target_orientation):
+        # solve an optimization problem,  f(q+dq) = target_position, target_orientation
+        # min \sum |dq|
+        pass
+    
+    
     def ik_velocity(self, target_position, target_orientation):
         # output the despired joint velocity, w.r.t. current state
         # ik , Jacobian Matrix
@@ -61,20 +67,22 @@ class BaseManipulator():
         return joint_torque
         
         
-    def reset(self, position, joint_pos, joint_velocity):
-        self.base_position = position
-        self.joint_pos = joint_pos
-        self.joint_velocity = joint_velocity
-        self.action = None
+    def reset(self):
+        self.base_position = self.init_base_position
+        self.joint_pos = self.init_joint_pos
+        self.joint_velocity = self.init_joint_velocity
+        self.target_orientation = None
         self.target_position = None
+        
 
     def check_collision(self):
         """
-        based on shape of chassis, judge the collision
+        based on shape of link, judge the collision
         
-        should be implemented in simulation
+        should be implemented in numerical simulation
+        in Mujoco or other simulator, this function can be ignored
         """
-        raise NotImplementedError
+        pass
         
         
     

@@ -13,6 +13,9 @@ class Target():
     def __init__(self):
         pass
 
+
+# 需要实现从Mujoco读取机器人和物体的状态信息，传递给机器人或者物体类对象
+
 class MobileManipulatorTrackingControlEnv(BaseEnv, MujocoConnect):
     def __init__(self, model_path):
         MujocoConnect.__init__(model_path)

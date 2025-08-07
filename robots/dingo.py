@@ -32,7 +32,9 @@ class Dingo(Chassis):
         # forward kinematic
         pass
 
-        
+    """
+    In Mujoco, these functions can be ignored.
+    """
     def check_collision_point(self, point):
         point_ref = point - self.position
         distance = np.linalg.norm(point_ref)

@@ -1,5 +1,7 @@
 import numpy as np
 
+# wheel velocity
+
 class MecanumController():
     def __init__(self):
         self.velocity = None
