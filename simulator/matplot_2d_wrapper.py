@@ -88,8 +88,8 @@ class MatplotConnect():
         return self.ax.plot([float(point1[0]), float(point2[0])], [float(point1[1]), float(point2[1])], marker=marker, markersize=markersize,  linewidth=linewidth, linestyle=linestyle, color=color)
         
 
-    def point_plot(self, point, s=10, marker='.', c='red'):
-        return self.ax.scatter(point[0], point[1], c=c, s =s, marker = marker)
+    def point_plot(self, point, markersize=10, marker='.', color='red', linewidth=2, linestyle = '-'):
+        return self.ax.scatter(point[0], point[1], c=color, s = markersize, marker = marker)
         
     def render(self, robots, objects, dt):
         self.cla()
