@@ -52,13 +52,13 @@ def quat2angle(q):
     
 
 # converter to quaternion from (radian angle, direction)
-def angle_dir_to_quat(angle, dir):
-    if type(dir) == list:
-        dir = np.array(dir)
-    dir = dir / np.linalg.norm(dir)
+def angle_dir_to_quat(angle, direction):
+    if type(direction) == list:
+        direction = np.array(direction)
+    direction = direction / np.linalg.norm(direction)
     quat = np.zeros(4)
     quat[0] = math.cos(angle / 2)
-    quat[1:] = math.sin(angle / 2) * dir
+    quat[1:] = math.sin(angle / 2) * direction
     return quat
     
 

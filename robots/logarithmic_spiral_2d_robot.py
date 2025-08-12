@@ -69,16 +69,21 @@ class LSRobotGenerator():
         
     
 class RobotModule2D():
-    def __init__(self, params):
+    def __init__(self, params, rho = 0.001):
+        self.rho = rho
         self.l = params[0]
         self.le = params[1]
         self.h = params[2]
         self.d = params[3]
         
+        self.mass, self.initial_CoM = self.compute_com_mass()
+        self.inertia_matrix = self.compute_inertia_matrix()
+        
         self.position = None
         self.orientation = None
         self.init_orientation = None
         self.init_position = None
+        self.CoM = None
         
         self.point_matrix = np.zeros((6, 2))
         self.init_point_matrix = np.zeros((6, 2))
@@ -88,6 +93,22 @@ class RobotModule2D():
         
         self.cable_inner_length_left = 0.
         self.cable_inner_length_right = 0.
+        
+    def compute_com_mass(self):
+        mass = self.rho * self.d * (self.l + self.le)
+        
+        top = self.le**2 / 2. + self.le * self.h + (self.h ** 2) / 2. + (self.l ** 3 + (2 * self.le + 2 * self.h - 3 * self.l) * (self.le + self.h)**2) / (6. * (self.l - self.le - self.h))
+        bottom = 0.5 * (self.l + self.le)
+        CoM = np.array([top / bottom, 0.])
+        return mass, CoM
+        
+    def compute_inertia_matrix(self):
+        I = np.zeros((2, 2))
+        I_yy = - self.d * self.h ** 3 / 6. + (self.l ** 4 - (self.le + self.h) ** 4) * self.d / (self.l - self.le - self.h) / 6.
+        I_xx = (2 * self.l / 3. - (self.l - self.le - self.h) / 2. - self.h / 2.) * self.d**3
+        I[0, 0] = I_xx
+        I[1, 1] = I_yy
+        return I
         
         
     def initial_module(self, position, orientation):
@@ -144,6 +165,14 @@ class RobotModule2D():
     def get_bottom_right_initial(self):
         return self.init_cable_point[3]
         
+    def get_CoM_initial(self):
+        return self.initial_CoM
+        
+    def get_CoM(self):
+        return self.CoM
+        
+    def get_inertia_matrix(self):
+        return self.inertia_matrix
         
         
     def reset(self):
@@ -163,7 +192,9 @@ class RobotModule2D():
         trans2 = np.transpose(R @ self.init_cable_point.T)
         for i in range(len(init_cable_point)):
             self.cable_point[i, :] = self.position + trans2[i, :]
-        
+            
+        trans3 = R @ self.initial_CoM
+        self.CoM = self.position + trans3
             
         
         
@@ -393,6 +424,12 @@ class TwoStringContinuumRobot():
                 J[0][i] = hadamard_sum(temp_l, dR_dq)
                 J[1][i] = hadamard_sum(temp_r, dR_dq)
         return J
+        
+    def compute_Jacobian_module(self):
+        """
+        v, w = J theta'
+        """
+        pass
     
     
     def step_v(self, cable_velocity, dt):
