@@ -106,8 +106,8 @@ class RobotModule2D():
         I = np.zeros((2, 2))
         I_yy = - self.d * self.h ** 3 / 6. + (self.l ** 4 - (self.le + self.h) ** 4) * self.d / (self.l - self.le - self.h) / 6.
         I_xx = (2 * self.l / 3. - (self.l - self.le - self.h) / 2. - self.h / 2.) * self.d**3
-        I[0, 0] = I_xx
-        I[1, 1] = I_yy
+        I[0, 0] = I_xx * self.rho
+        I[1, 1] = I_yy * self.rho
         return I
         
         
