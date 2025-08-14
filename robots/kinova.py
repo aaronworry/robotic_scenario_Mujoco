@@ -5,6 +5,10 @@ import pinocchio
 
 # this can also deploy end-effector
 
+"""
+需要实现速度到力的方法，可调用 优化， 等Controller
+"""
+
 class Kinova(BaseManipulator):
     def __init__(self, model_file, base_position, joint_pos, joint_velocity):
         super().__init__(base_position, joint_pos, joint_velocity)

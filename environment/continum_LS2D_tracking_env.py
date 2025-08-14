@@ -12,8 +12,9 @@ class Target():
     def __init__(self):
         pass
 
-class LS2D_tracking_Env(BaseEnv, MatplotConnect):
-    def __init__(self):
+class LS2D_tracking_Env(BaseEnv):
+    def __init__(self, numerical_simulation = True):
+        super().__init__(numerical_simulation = True)
         """
         observe_space
         action_space
