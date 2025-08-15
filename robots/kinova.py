@@ -1,5 +1,6 @@
 import numpy as np
 from robot.baseManipulator import BaseManipulator
+from controller.manipulator_controller import Manipulator_PD_Controller
 import pinocchio
 
 
@@ -14,6 +15,7 @@ class Kinova(BaseManipulator):
         super().__init__(base_position, joint_pos, joint_velocity)
         self.load_parameters(model_file)
         self.control_mode = None
+        self.set_controller()
         
     def load_parameters(self, model_file):
         """
@@ -50,36 +52,28 @@ class Kinova(BaseManipulator):
         elif self.control_mode == "torque":
             return self.ik_force(joint_velocity)
         return None
-    
+        
+    def step_position(self, target_position):
+        force = self.controller.force_control_end_effector(self.end_effector.position, self.end_effector.velocity, target_position, np.zeros(3))
+        torque = self.force_to_joint_torque(force)
+        return torque
+        
     def set_controller(self):
+        self.controller = Manipulator_PD_Controller()
+        
+    def force_to_joint_torque(self, force):
         pass
         
-        # 在控制器中实现PID
-        
-    def move_to(self):
+    def ik(self, target_position, target_orientation):
         pass
+        
+    def move_to(self, position, orientation = None):
+        if orientation == None:
+            self.step_position(position)
+        else:
+            pass
         # PID control 
         
-        
-        
-        # Cartesian impedance:
-        self.thr_cart_error = 0.001  # m
-        self.Kd = np.eye(3) * 40
-        self.Dd = np.eye(3) * 3
-        self.error_cart_MAX = 0.1  # m
-        self.thr_dynamic = 0.3  # rad/s
-
-        # Null space:
-        self.K_n = np.eye(6) * 0.125
-        self.D_n = np.eye(6) * 0.025
-
-        # Base
-        self.thr_pos_error = 0.01  # m
-        self.thr_rot_error = np.deg2rad(10)
-        self.K_pos = 4
-        self.gain_pos_MAX = 1
-        self.K_rot = 0.5
-        self.gain_rot_MAX = 0.5
         
 
 
