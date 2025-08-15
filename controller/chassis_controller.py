@@ -1,6 +1,6 @@
 import numpy as np
 
-# wheel velocity
+# output : wheel velocity, motor torque
 
 class MecanumController():
     def __init__(self):
@@ -20,9 +20,16 @@ class MecanumController():
         
     def step(self, target_position, target_orientation):
         """
-        output torque of wheels
+        output torque/velocity of wheels
         """
         pass
+        
+    def compute_wheel_velocity(self):
+        pass
+        
+    def compute_motor_torque(self):
+        pass
+    
         
         
     def direction_to_wheel_torques(self, speed, direction: np.ndarray) -> np.ndarray:

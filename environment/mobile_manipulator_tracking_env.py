@@ -16,9 +16,10 @@ class Target():
 
 # 需要实现从Mujoco读取机器人和物体的状态信息，传递给机器人或者物体类对象
 
-class MobileManipulatorTrackingControlEnv(BaseEnv, MujocoConnect):
+class MobileManipulatorTrackingControlEnv(BaseEnv):
     def __init__(self, model_path):
-        MujocoConnect.__init__(model_path)
+        super().__init__()
+        self.simulator.__init__(model_path)
         # define observation and action space
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(2+6,), dtype=np.float64)
         

@@ -1,5 +1,8 @@
 import numpy as np
 
+
+# generate torque of joint motor
+
 class Manipulator_PD_Controller():
     def __init__(self, Kp = np.eye(3) * 40, Kd = np.eye(3) * 3, error_cart_MAX = 0.1, thr_cart_error = 0.001):
         self.Kp = Kp
