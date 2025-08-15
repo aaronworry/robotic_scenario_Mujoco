@@ -4,7 +4,7 @@ import numpy as np
 from gym.spaces import Box
 
 from environment.baseEnv import BaseEnv
-from simulator.matplot_2d_wrapper import MatplotConnect
+from visualization.matplot_2d_visual import MatplotViewer
 from robots.logarithmic_spiral_2d_robot import TwoStringContinuumRobot
 
 

@@ -5,8 +5,8 @@ import time
 import numpy as np
 
 
-class MatplotConnect():
-    """Provides the matplot visualization of the robot."""
+class MatplotViewer():
+    """Provides the matplot visualization of the env."""
     def __init__(self, X_limit=[-5., 5.], Y_limit=[-5., 5.]):
     
         self.xlim = X_limit
