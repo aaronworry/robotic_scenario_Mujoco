@@ -19,19 +19,19 @@ class MecanumController():
         return wheels_lf, wheels_lb, wheels_rf, wheels_rb
         
         
-    def direction_to_wheel_torques(self, direction: list) -> np.ndarray:
+    def direction_to_wheel_torques(self, speed, direction: np.ndarray) -> np.ndarray:
+        # 机器人底盘相对坐标系
         """Calculate the required wheel torques to move in the given direction."""
-        m = np.linalg.norm(direction)
-        angle = np.arctan2(*direction)
+        angle = np.arctan2(direction[1], direction[0])
 
         torque_A = self.calculate_torque(angle)
         torque_B = self.calculate_torque(-angle)
-        return np.array([torque_A, torque_B, torque_B, torque_A]) * m
+        return np.array([torque_A, torque_B, torque_B, torque_A]) * speed
 
 
-    def rotation_to_wheel_torques(self, rotation: float) -> np.ndarray:
-        """Calculate the required wheel torques to move in the given direction."""
-        return np.array([1, -1, 1, -1]) * np.sign(rotation)
+    def rotation_to_wheel_torques(self, angular_speed, rotation: float) -> np.ndarray:
+        """Calculate the required wheel torques to move in the given rotation."""
+        return np.array([1, -1, 1, -1]) * np.sign(rotation) * angular_speed
 
 
     def calculate_torque(self, angle: float) -> float:
