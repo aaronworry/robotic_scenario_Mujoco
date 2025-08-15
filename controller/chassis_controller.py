@@ -18,6 +18,12 @@ class MecanumController():
         
         return wheels_lf, wheels_lb, wheels_rf, wheels_rb
         
+    def step(self, target_position, target_orientation):
+        """
+        output torque of wheels
+        """
+        pass
+        
         
     def direction_to_wheel_torques(self, speed, direction: np.ndarray) -> np.ndarray:
         # 机器人底盘相对坐标系
