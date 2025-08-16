@@ -1,62 +1,98 @@
 import numpy as np
 
-# output : wheel velocity, motor torque
+# output : wheel velocity
+
+# 需要将全局坐标系下的速度转化到机器人本身坐标系上
 
 class MecanumController():
-    def __init__(self):
-        self.velocity = None
-
-    def run(self, wheels_lf, wheels_lb, wheels_rf, wheels_rb):
-        return velocity 
-
-    def run_ik(self, velocity):
-        
-        wheels_lf = 0.
-        wheels_lb = 0. # left back
-        wheels_rf = 0. # right front
-        wheels_rb = 0. 
-        
-        return wheels_lf, wheels_lb, wheels_rf, wheels_rb
-        
-    def step(self, target_position, target_orientation):
+    def __init__(self, wheel_radius, length_between_wheel, width_between_wheel, develop_type = "X"):
+    
         """
-        output torque/velocity of wheels
+        develop_type: O
+        /     \
+                    -> x
+        \     /
+        develop_type: X       The axial direction of the roller towards the robot's centre.
+        \     /
+                    -> x
+        /     \
         """
-        pass
+        self.L = length_between_wheel
+        self.W = width_between_wheel
+        self.r = wheel_radius
+        self.develop_type = develop_type
         
-    def compute_wheel_velocity(self):
-        pass
+
+    def global_to_frame(self, global_velocity, global_angular_velocity, global_orientation):
+        relative_angular_speed =  global_angular_velocity
+        relative_velocity = np.array([0., 0.])
+        relative_velocity[0] = np.dot(global_velocity, global_orientation)
+        relative_velocity[1] = np.sqrt(global_velocity[0]**2 + global_velocity[1]**2 - relative_velocity[0]**2)
+        return relative_velocity, relative_angular_speed
+
+    def fk(self, wheel_lf_speed, wheel_rf_speed, wheel_lb_speed, wheel_rb_speed):
+        relative_velocity = np.array([0., 0.])
+        relative_angular_speed = 0.
+        if self.develop_type == "X":
+            relative_velocity[0] = (wheel_lf_speed + wheel_rf_speed + wheel_lb_speed + wheel_rb_speed) / 4.
+            relative_velocity[1] = (-wheel_lf_speed + wheel_rf_speed - wheel_lb_speed + wheel_rb_speed) / 4.
+            relative_angular_speed = (-wheel_lf_speed - wheel_rf_speed + wheel_lb_speed + wheel_rb_speed) / (2 * self.L + 2 * self.W)
+        elif self.develop_type == "O":
+            relative_velocity[0] = (wheel_lf_speed + wheel_rf_speed + wheel_lb_speed + wheel_rb_speed) / 4.
+            relative_velocity[1] = (wheel_lf_speed - wheel_rf_speed + wheel_lb_speed - wheel_rb_speed) / 4.
+            relative_angular_speed = (-wheel_lf_speed - wheel_rf_speed + wheel_lb_speed + wheel_rb_speed) / (2 * self.L + 2 * self.W)
+            
+        return relative_velocity, relative_angular_speed
+            
+
+    def ik(self, relative_velocity, relative_angular_speed):
+        if self.develop_type == "X":
+            wheel_lf_speed = relative_velocity[0] - relative_velocity[1] - relative_angular_speed * (self.W + self.H) / 2.
+            wheel_rf_speed = relative_velocity[0] + relative_velocity[1] - relative_angular_speed * (self.W + self.H) / 2.
+            wheel_lb_speed = relative_velocity[0] - relative_velocity[1] + relative_angular_speed * (self.W + self.H) / 2.
+            wheel_rb_speed = relative_velocity[0] + relative_velocity[1] + relative_angular_speed * (self.W + self.H) / 2.
+        elif self.develop_type == "O":
+            wheel_lf_speed = relative_velocity[0] + relative_velocity[1] - relative_angular_speed * (self.W + self.H) / 2.
+            wheel_rf_speed = relative_velocity[0] - relative_velocity[1] - relative_angular_speed * (self.W + self.H) / 2.
+            wheel_lb_speed = relative_velocity[0] + relative_velocity[1] + relative_angular_speed * (self.W + self.H) / 2.
+            wheel_rb_speed = relative_velocity[0] - relative_velocity[1] + relative_angular_speed * (self.W + self.H) / 2.
         
-    def compute_motor_torque(self):
-        pass
+        return np.array([wheel_lf_speed, wheel_rf_speed, wheel_lb_speed, wheel_rb_speed])
+        
+        
+    def motor_output_speed(self, wheel_speed):
+        """
+        m/s  -> rpm
+        """
+        return (wheel_speed / self.r) * 30 / np.pi
+        
+        
+    def step(self, target_position, target_orientation, current_position, current_orientation, speed, angular_speed):
+        """
+        output velocity of wheels
+        """
+        direction = (target_position - current_position) / np.linalg.norm(target_position - current_position)
+        global_v = speed * direction
+        delta_orientation = np.arctan2(target_orientation[1], target_orientation[0]) - np.arctan2(current_orientation[1], current_orientation[0])
+        if delta_orientation > np.pi:
+            delta_orientation -= 2 * np.pi
+        elif delta_orientation < -np.pi:
+            delta_orientation += 2 * np.pi
+        global_w = angular_speed * np.sign(delta_orientation)
+        v, w = self.global_to_frame(global_v, global_w, current_orientation)
+        four_wheel_speed = self.ik(v, w)
+        motor_rpm = np.array([0.]*4)
+        for i in range(4):
+            motor_rpm[i] = self.motor_output_speed(four_wheel_speed[i])
+        
+        return motor_rpm
+        
     
         
-        
-    def direction_to_wheel_torques(self, speed, direction: np.ndarray) -> np.ndarray:
-        # 机器人底盘相对坐标系
-        """Calculate the required wheel torques to move in the given direction."""
-        angle = np.arctan2(direction[1], direction[0])
-
-        torque_A = self.calculate_torque(angle)
-        torque_B = self.calculate_torque(-angle)
-        return np.array([torque_A, torque_B, torque_B, torque_A]) * speed
-
-
-    def rotation_to_wheel_torques(self, angular_speed, rotation: float) -> np.ndarray:
-        """Calculate the required wheel torques to move in the given rotation."""
-        return np.array([1, -1, 1, -1]) * np.sign(rotation) * angular_speed
-
-
-    def calculate_torque(self, angle: float) -> float:
-        """Calculate the required wheel torque to match the given moving angle."""
-        if angle < -np.pi / 2:
-            return -1
-        if angle < 0:
-            return 1 + angle * (4 / np.pi)
-        if angle < np.pi / 2:
-            return 1
-        return 3 - angle * (4 / np.pi)
-
+    
+class OmniController():
+    def __init__(self):
+        pass
 
 
 
