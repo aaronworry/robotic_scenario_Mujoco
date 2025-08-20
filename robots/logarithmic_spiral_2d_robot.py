@@ -495,3 +495,73 @@ class TwoStringContinuumRobot():
         
         
         
+
+def compute_energy(thetas, theta_dots, link_lengths, com_lengths, masses, inertias, g):
+    n = len(thetas)
+    KE = 0.0
+    PE = 0.0
+
+    # Position and velocity of the center of mass of each link
+    origin = np.array([0.0, 0.0])
+    pos = origin.copy()
+    angle_sum = 0.0
+    vel = np.array([0.0, 0.0])
+    omega = 0.0
+    Jv = np.zeros((2*n, n))
+    Jv_dot = np.zeros((2*n, n))
+    Jw = np.zeros((n, n))
+    JR = np.zeros((n, n))
+    V = np.zeros((2, n))
+    W = np.zeros((n))
+
+    for i in range(n):
+        l = link_lengths[i]
+        lc = com_lengths[i]
+        m = masses[i]
+        I = inertias[i]
+        theta = thetas[i]
+        theta_dot = theta_dots[i]
+
+        # Update total angle and angular velocity
+        angle_sum += theta
+        omega += theta_dot
+
+        # Unit vector in the direction of the current link
+        dir_vector = np.array([np.cos(angle_sum), np.sin(angle_sum)])
+
+        # Position of the center of mass of the current link     质心坐标
+        com_pos = pos + lc * dir_vector
+
+        # Linear velocity of COM using Jacobian approximation
+        v_com = np.array([0.0, 0.0])
+        angle_temp = 0.0
+        for j in range(i + 1):
+            angle_temp += thetas[j]
+            perp = np.array([-np.sin(angle_temp), np.cos(angle_temp)])        # 速度的方向       dl_d\theta = link_lengths[j] * perp
+            v_com += com_lengths[j] * theta_dots[j] * perp if j == i else link_lengths[j] * theta_dots[j] * perp
+            Jv_dot[2*i][j] = com_lengths[j] * np.cos(angle_temp) if j == i else link_lengths[j] * np.cos(angle_temp)
+            Jv_dot[2*i + 1][j] = com_lengths[j] * np.sin(angle_temp) if j == i else link_lengths[j] * np.sin(angle_temp)
+            Jv[2*i][j] = com_lengths[j] * theta_dots[j] * perp[0] if j == i else link_lengths[j] * theta_dots[j] * perp[0]
+            Jv[2*i + 1][j] = com_lengths[j] * theta_dots[j] * perp[1] if j == i else link_lengths[j] * theta_dots[j] * perp[1]
+            Jw[i][j] = 1.
+            JR[i][j] = com_lengths[j] * perp[1] if j == i else link_lengths[j] * perp[1]
+
+        # Translational KE
+        KE_trans = 0.5 * m * np.dot(v_com, v_com)
+        V[:,i] = v_com
+        W[i] = omega
+
+        # Rotational KE
+        KE_rot = 0.5 * I * omega**2
+
+        # Potential Energy
+        PE_i = m * g * com_pos[1]
+
+        # Accumulate
+        KE += KE_trans + KE_rot
+        PE += PE_i
+
+        # Move to end of the current link
+        pos += l * dir_vector
+
+    return Jv, Jv_dot, Jw, JR, V, W, KE, PE
