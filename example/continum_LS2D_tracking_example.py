@@ -11,4 +11,3 @@ state = env.reset()
 while True:
     action = None
     state = env.step(action = action, dt = DT)
-

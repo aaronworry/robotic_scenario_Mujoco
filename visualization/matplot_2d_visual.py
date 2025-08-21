@@ -70,13 +70,17 @@ class MatplotViewer():
             plot_item = None
             if len(temp_object) == 1:
                 plot_item = self.point_plot(temp_object[0], **kwargs)
+                if dtype == "dynamic":
+                    self.dynamic_objects_plot_list.append(plot_item)
+                elif dtype == "static":
+                    self.static_objects_plt_list.append(plot_item)
             elif len(temp_object) == 2:
                 plot_item = self.line_plot(temp_object[0], temp_object[1], **kwargs)
                 
-            if dtype == "dynamic":
-                self.dynamic_objects_plot_list.append(plot_item[0])
-            elif dtype == "static":
-                self.static_objects_plt_list.append(plot_item[0])
+                if dtype == "dynamic":
+                    self.dynamic_objects_plot_list.append(plot_item[0])
+                elif dtype == "static":
+                    self.static_objects_plt_list.append(plot_item[0])
         
     def drawRobots(self, robots, dtype, **kwargs):
         for robot in robots:

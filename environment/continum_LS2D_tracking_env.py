@@ -5,7 +5,7 @@ from gym.spaces import Box
 
 from environment.baseEnv import BaseEnv
 from visualization.matplot_2d_visual import MatplotViewer
-from robots.logarithmic_spiral_2d_robot import TwoStringContinuumRobot
+from robot.logarithmic_spiral_2d_robot import TwoStringContinuumRobot, LSRobotGenerator
 
 
 class Target():
@@ -35,7 +35,7 @@ class LS2D_tracking_Env(BaseEnv):
         """
         generator_param = np.array([[1., 0.571, 0.214, 0.8]]*5)
         self.robot = TwoStringContinuumRobot(generator_param, 0.8)
-        self.viewer = MatplotViewer()
+        self.viewer = MatplotViewer(X_limit=[-1., 15.], Y_limit=[-10., 10.])
         self.viewer.show()
         
         
@@ -46,6 +46,7 @@ class LS2D_tracking_Env(BaseEnv):
         """
         robot_draw = []
         cable_draw = []
+        point_draw = []
         last_tr = self.robot.start_point_right
         last_tl = self.robot.start_point_left
         for i in range(self.robot.n):
@@ -66,6 +67,11 @@ class LS2D_tracking_Env(BaseEnv):
             
             last_tr = tr
             last_tl = tl
+            
+            point_draw.append([bl])
+            point_draw.append([tl])
+            point_draw.append([br])
+            point_draw.append([tr])
             
             
         self.viewer.render([robot_draw], [cable_draw], self.dt)

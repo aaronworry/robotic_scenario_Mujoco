@@ -1,6 +1,5 @@
 import numpy as np
 from utils.util import hadamard_sum
-from optimizer.continuum_manipulator_velocities_solver import VelocityOptimizer
 
 
 class LSRobotGenerator():
@@ -119,6 +118,13 @@ class RobotModule2D():
         
         self.init_orientation = orientation / np.linalg.norm(orientation)
         self.init_position = position
+        
+        theta = np.arctan2(self.init_orientation[1], self.init_orientation[0])
+        R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+        
+        tran = np.transpose(R @ self.init_point_matrix.T)
+        for i in range(len(self.point_matrix)):
+            self.point_matrix[i, :] = self.init_position + tran[i, :]
         
     def initial_cable_point(self, bottom_left, bottom_right, top_left, top_right):
         # input: global position in init state
@@ -290,10 +296,10 @@ class TwoStringContinuumRobot():
             module.initial_module(position, orientation)
             
             # intersection must exist
-            bottom_right = self.intersection(self.start_point_right, self.end_effector_point_right, module.init_point_matrix[0], module.init_point_matrix[1])
-            bottom_left = self.intersection(self.start_point_left, self.end_effector_point_left, module.init_point_matrix[0], module.init_point_matrix[5])
-            top_right = self.intersection(self.start_point_right, self.end_effector_point_right, module.init_point_matrix[2], module.init_point_matrix[3])
-            top_left = self.intersection(self.start_point_left, self.end_effector_point_left, module.init_point_matrix[4], module.init_point_matrix[3])
+            bottom_right = self.intersection(self.start_point_right, self.end_effector_point_right, module.point_matrix[0], module.point_matrix[1])
+            bottom_left = self.intersection(self.start_point_left, self.end_effector_point_left, module.point_matrix[0], module.point_matrix[5])
+            top_right = self.intersection(self.start_point_right, self.end_effector_point_right, module.point_matrix[2], module.point_matrix[3])
+            top_left = self.intersection(self.start_point_left, self.end_effector_point_left, module.point_matrix[4], module.point_matrix[3])
             module.initial_cable_point(bottom_left, bottom_right, top_left, top_right)
             
             self.cable_length_left_inner += module.cable_inner_length_left
