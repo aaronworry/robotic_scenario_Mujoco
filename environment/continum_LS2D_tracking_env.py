@@ -23,7 +23,9 @@ class LS2D_tracking_Env(BaseEnv):
         control_ub
         control_lb
         """
-        pass
+        self.dt = 0.1
+        
+
         
     def initialization(self):
         """
@@ -31,7 +33,44 @@ class LS2D_tracking_Env(BaseEnv):
         add robot with initial_state
         add object with initial_state
         """
-        raise NotImplementedError
+        generator_param = np.array([[1., 0.571, 0.214, 0.8]]*5)
+        self.robot = TwoStringContinuumRobot(generator_param, 0.8)
+        self.viewer = MatplotViewer()
+        self.viewer.show()
+        
+        
+    def render(self):
+        """
+        read point and line of robots
+        draw
+        """
+        robot_draw = []
+        cable_draw = []
+        last_tr = self.robot.start_point_right
+        last_tl = self.robot.start_point_left
+        for i in range(self.robot.n):
+            module_vertice = self.robot.modules[i].get_vertice_matrix()
+            for j in range(6):
+                robot_draw.append([module_vertice[j-1], module_vertice[j]])
+            
+            bl = self.robot.modules[i].get_bottom_left()
+            tl = self.robot.modules[i].get_top_left()
+            
+            br = self.robot.modules[i].get_bottom_right()
+            tr = self.robot.modules[i].get_top_right()
+            
+            cable_draw.append([br, tr])
+            cable_draw.append([bl, tl])
+            cable_draw.append([last_tr, br])
+            cable_draw.append([last_tl, bl])
+            
+            last_tr = tr
+            last_tl = tl
+            
+            
+        self.viewer.render([robot_draw], [cable_draw], self.dt)
+            
+        
         
         
     def reset(self):
@@ -40,22 +79,26 @@ class LS2D_tracking_Env(BaseEnv):
         set robot to initial_state
         set object to initial_state
         """
-        raise NotImplementedError
+        self.robot.reset()
+        self.render()
         
-    def step(self):
+    def step(self, action, dt):
         """
         update state of environment, including objects and robots
         """
-        raise NotImplementedError
+        theta_list = self.robot.random_control()
+        self.robot.forward(theta_list)
+        self.render()
+        return 0
         
     def reward(self):
         """
         calculate the reward based on states and actions
         """
-        raise NotImplementedError
+        return 0
         
     def get_obs(self):
         """
         get observation for other algorithms
         """
-        raise NotImplementedError
+        return 0

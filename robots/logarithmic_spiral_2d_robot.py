@@ -38,7 +38,7 @@ class LSRobotGenerator():
             assert(np.arctan2(self.h0, self.d0) + np.arctan2(self.l0 - self.le0 - self.h0, self.d0) == self.dtheta)
             pass
 
-        self.result = np.zero((1, 4))
+        self.result = np.zeros((1, 4))
         self.result[0,:] = np.array([self.l0, self.le0, self.h0, self.d0])
         
         
@@ -138,11 +138,14 @@ class RobotModule2D():
         inv_tran = np.transpose(R @ self.init_cable_point.T)
         self.init_cable_point = inv_tran
         
+    def get_vertice_matrix(self):
+        return self.point_matrix
+        
     
     def get_bottom_left(self):
         return self.cable_point[0]
         
-    def get_bottom_left_iitial(self):
+    def get_bottom_left_initial(self):
         return self.init_cable_point[0]
         
     def get_top_left(self):
@@ -188,7 +191,7 @@ class RobotModule2D():
             self.point_matrix[i, :] = self.position + tran[i, :]
         
         trans2 = np.transpose(R @ self.init_cable_point.T)
-        for i in range(len(init_cable_point)):
+        for i in range(len(self.init_cable_point)):
             self.cable_point[i, :] = self.position + trans2[i, :]
             
         trans3 = R @ self.initial_CoM
@@ -221,11 +224,11 @@ class TwoStringContinuumRobot():
         self.theta_lb[0] = -delta_theta_0
         
         self.modules = []
-        self.initial_position_matrix = np.zero((self.n, 2))
+        self.initial_position_matrix = np.zeros((self.n, 2))
         self.initial_theta_list = [0.] * self.n
-        self.position_matrix = np.zero((self.n, 2))
+        self.position_matrix = np.zeros((self.n, 2))
         self.theta_list = [0.] * self.n
-        self.intial_orientations = np.zeros((self.n, 2))
+        self.initial_orientations = np.zeros((self.n, 2))
         self.orientations = np.zeros((self.n, 2))
         
         # string state
@@ -248,11 +251,10 @@ class TwoStringContinuumRobot():
         self.end_effector_point_left = np.array([y / np.tan(self.taper_angle / 2), 0.])
         self.end_effector_point_right = np.array([y / np.tan(self.taper_angle / 2), 0.])
         
-        self.v_opt = VelocityOptimizer(2, self.n, 2)
         
         self.initialization()
     
-    def intersection(point1, point2, point3, point4):        
+    def intersection(self, point1, point2, point3, point4):        
         """
             line1 : point1, point2
             line2: point3, point4
@@ -284,7 +286,7 @@ class TwoStringContinuumRobot():
         position = np.array([0., 0.])
         orientation = np.array([1., 0.])
         for i in range(self.n):
-            module = RobotModule2D(trapezoidal_param[i, :])
+            module = RobotModule2D(self.trapezoidal_param[i, :])
             module.initial_module(position, orientation)
             
             # intersection must exist
@@ -328,10 +330,10 @@ class TwoStringContinuumRobot():
         self.cable_length_left_outer = 0.
         self.cable_length_right_outer = 0.
         for i in range(self.n):
-            self.modules[i].update(self.position_matrix[i, :], self.orientations[i, :]))
+            self.modules[i].update(self.position_matrix[i, :], self.orientations[i, :])
             if i == 0:
-                self.cable_length_left_outer += np.linalg.norm(start_point_left - self.modules[i].get_bottom_left())
-                self.cable_length_right_outer += np.linalg.norm(start_point_right - self.modules[i].get_bottom_right())
+                self.cable_length_left_outer += np.linalg.norm(self.start_point_left - self.modules[i].get_bottom_left())
+                self.cable_length_right_outer += np.linalg.norm(self.start_point_right - self.modules[i].get_bottom_right())
             else:
                 self.cable_length_left_outer += np.linalg.norm(self.modules[i-1].get_top_left() - self.modules[i].get_bottom_left())
                 self.cable_length_right_outer += np.linalg.norm(self.modules[i-1].get_top_right() - self.modules[i].get_bottom_right())

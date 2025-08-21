@@ -92,6 +92,8 @@ class BaseEnv(gym.Env):
             self.simulator = MujocoWrapper(**kwarg)
         elif simulator_type == "Issac":
             self.simulator = IssacWrapper(**kwarg)
+            
+        self.initialization()
         
     def initialization(self):
         """

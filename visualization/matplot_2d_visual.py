@@ -24,9 +24,10 @@ class MatplotViewer():
         self.drawObjects(objects, dtype="static", **kwargs)
         
     
-    def cla(self):
-        for item in self.dynamic_objects_plot_list:
-            item.remove()
+    def com_cla(self):
+        if len(self.dynamic_objects_plot_list) > 0:
+            for item in self.dynamic_objects_plot_list:
+                item.remove()
         self.dynamic_objects_plot_list = []
         
     def pause(self, time=0.001):
@@ -56,33 +57,34 @@ class MatplotViewer():
             
             # self.ax.lengend(prof = font)
             
-            plt.savefig('../figures/result.pdf',dpi=300,bbox_inches = "tight")
+            plt.savefig('result.pdf',dpi=300,bbox_inches = "tight")
             
     
-    def add_object(item, **kwargs):
+    def add_object(self, item, dtype, **kwargs):
         """
         a closet set
         item = [[point], [point], [point]]:    point_plot
         item = [point_list, point_list, point_list]:   line_plot
         """
         for temp_object in item:
+            plot_item = None
             if len(temp_object) == 1:
                 plot_item = self.point_plot(temp_object[0], **kwargs)
             elif len(temp_object) == 2:
                 plot_item = self.line_plot(temp_object[0], temp_object[1], **kwargs)
                 
             if dtype == "dynamic":
-                self.dynamic_objects_plot_list.append(plot_item)
+                self.dynamic_objects_plot_list.append(plot_item[0])
             elif dtype == "static":
-                self.static_objects_plt_list.append(plot_item)
+                self.static_objects_plt_list.append(plot_item[0])
         
-    def drawRobots(self, robots, **kwargs):
+    def drawRobots(self, robots, dtype, **kwargs):
         for robot in robots:
-            self.add_object(robot, **kwargs)
+            self.add_object(robot, dtype, **kwargs)
             
-    def drawObjects(self, objects, **kwargs):
+    def drawObjects(self, objects, dtype, **kwargs):
         for item in objects:
-            self.add_object(item, **kwargs)
+            self.add_object(item, dtype, **kwargs)
 
     def line_plot(self, point1, point2, marker=',', markersize=1, linewidth=2, linestyle = '-', color="black"):
         return self.ax.plot([float(point1[0]), float(point2[0])], [float(point1[1]), float(point2[1])], marker=marker, markersize=markersize,  linewidth=linewidth, linestyle=linestyle, color=color)
@@ -92,8 +94,8 @@ class MatplotViewer():
         return self.ax.scatter(point[0], point[1], c=color, s = markersize, marker = marker)
         
     def render(self, robots, objects, dt):
-        self.cla()
-        self.drawRobots(robots, dtype = "dynamic")
-        self.drawObjects(objects, dtype = "dynamic")
+        self.com_cla()
+        self.drawRobots(robots, dtype = "dynamic", linewidth=3)
+        self.drawObjects(objects, dtype = "dynamic", linewidth=1)
         self.show()
         self.pause(dt)

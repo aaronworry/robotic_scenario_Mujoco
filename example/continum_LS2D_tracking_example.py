@@ -10,5 +10,5 @@ env = LS2D_tracking_Env()
 state = env.reset()
 while True:
     action = None
-    state, _, _ = env.step(action = action, dt = DT)
-    print(state)
+    state = env.step(action = action, dt = DT)
+
