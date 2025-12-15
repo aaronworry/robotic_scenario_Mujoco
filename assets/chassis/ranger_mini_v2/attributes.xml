@@ -1,0 +1,46 @@
+<mujoco model="ranger_mini">
+    <asset>
+        <mesh name="ranger_base" file="meshes/ranger-base-link.stl"/>
+        <mesh name="ranger_wheel_fl" file="meshes/ranger-wheel-1.stl"/>
+        <mesh name="ranger_wheel_fr" file="meshes/ranger-wheel-2.stl"/>
+        <mesh name="ranger_wheel_rl" file="meshes/ranger-wheel-3.stl"/>
+        <mesh name="ranger_wheel_rr" file="meshes/ranger-wheel-4.stl"/>
+        <mesh name="ranger_suspension_link_1" file="meshes/ranger-suspension-link-1.stl"/>
+        <mesh name="ranger_suspension_link_2" file="meshes/ranger-suspension-link-2.stl"/>
+        <mesh name="ranger_suspension_link_3" file="meshes/ranger-suspension-link-3.stl"/>
+        <mesh name="ranger_suspension_link_4" file="meshes/ranger-suspension-link-4.stl"/>
+
+        <material name="mat_wheel_visual" rgba="0.2 0.2 0.2 1"/>
+        <material name="mat_wheel_collider" rgba="1 1 1 0.1"/>
+  </asset>
+
+    <contact>
+        <exclude body1="base_link" body2="fl_steering_wheel_link"/>
+        <exclude body1="base_link" body2="fl_wheel_link"/>
+        <exclude body1="fl_steering_wheel_link" body2="fl_wheel_link"/>
+
+        <exclude body1="base_link" body2="fr_steering_wheel_link"/>
+        <exclude body1="base_link" body2="fr_wheel_link"/>
+        <exclude body1="fr_steering_wheel_link" body2="fr_wheel_link"/>
+
+        <exclude body1="base_link" body2="rl_steering_wheel_link"/>
+        <exclude body1="base_link" body2="rl_wheel_link"/>
+        <exclude body1="rl_steering_wheel_link" body2="rl_wheel_link"/>
+
+        <exclude body1="base_link" body2="rr_steering_wheel_link"/>
+        <exclude body1="base_link" body2="rr_wheel_link"/>
+        <exclude body1="rr_steering_wheel_link" body2="rr_wheel_link"/>
+  </contact>
+
+    <actuator>
+        <motor name="fl_wheel_motor" joint="fl_wheel_joint" ctrlrange="-40.19 40.19" ctrllimited="true"/>
+        <motor name="fr_wheel_motor" joint="fr_wheel_joint" ctrlrange="-40.19 40.19" ctrllimited="true"/>
+        <motor name="rl_wheel_motor" joint="rl_wheel_joint" ctrlrange="-40.19 40.19" ctrllimited="true"/>
+        <motor name="rr_wheel_motor" joint="rr_wheel_joint" ctrlrange="-40.19 40.19" ctrllimited="true"/>
+
+        <position name="fl_wheel_steer" joint="fl_steering_wheel_joint" kp="35" kv="5"/>
+        <position name="fr_wheel_steer" joint="fr_steering_wheel_joint" kp="35" kv="5"/>
+        <position name="rl_wheel_steer" joint="rl_steering_wheel_joint" kp="35" kv="5"/>
+        <position name="rr_wheel_steer" joint="rr_steering_wheel_joint" kp="35" kv="5"/>
+  </actuator>
+</mujoco>

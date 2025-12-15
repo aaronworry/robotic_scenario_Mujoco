@@ -1,0 +1,9 @@
+<mujoco model="arm_and_base">
+    <include file="world/attributes.xml"/>
+    <worldbody>
+        <include file="world/world.xml"/>
+        <include file="mobile_manipulator/dingo_with_kinova.xml"/>
+    </worldbody>
+    <include file="manipulator/kinova/attributes.xml"/>
+    <include file="chassis/dingo/attributes.xml"/>
+</mujoco>

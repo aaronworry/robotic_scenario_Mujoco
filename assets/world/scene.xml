@@ -1,0 +1,6 @@
+<mujoco model="world">
+    <include file="attributes.xml"/>
+    <worldbody>
+        <include file="world.xml"/>
+    </worldbody>
+</mujoco>

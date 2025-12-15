@@ -1,0 +1,32 @@
+<mujoco model="summit_xls">
+  <asset>
+    <mesh name="summit_xls_chassis" file="meshes/bases/xls/summit_xls_chassis.stl"/>
+    <mesh name="summit_xls_chapas_inox_tapas" file="meshes/bases/xls/summit_xls_chapas_inox_tapas.stl"/>
+    <mesh name="robotnik_logo_chasis" file="meshes/bases/xls/robotnik_logo_chasis.stl"/>
+    <mesh name="summit_xls_omni_wheel_1" file="meshes/wheels/omni_wheel_1.stl"/>
+    <mesh name="summit_xls_omni_wheel_2" file="meshes/wheels/omni_wheel_2.stl"/>
+    <mesh name="structure_hokuyo" file="meshes/structures/structure_hokuyo.stl"/>
+  </asset>
+  <sensor>
+    <jointpos name="xls_position_fr" joint="front_right_wheel_rolling_joint"/>
+    <jointpos name="xls_position_fl" joint="front_left_wheel_rolling_joint"/>
+    <jointpos name="xls_position_br" joint="back_right_wheel_rolling_joint"/>
+    <jointpos name="xls_position_bl" joint="back_left_wheel_rolling_joint"/>
+
+    <jointvel name="xls_velocity_fr" joint="front_right_wheel_rolling_joint"/>
+    <jointvel name="xls_velocity_fl" joint="front_left_wheel_rolling_joint"/>
+    <jointvel name="xls_velocity_br" joint="back_right_wheel_rolling_joint"/>
+    <jointvel name="xls_velocity_bl" joint="back_left_wheel_rolling_joint"/>
+
+    <jointactuatorfrc name="xls_torque_fr" joint="front_right_wheel_rolling_joint"/>
+    <jointactuatorfrc name="xls_torque_fl" joint="front_left_wheel_rolling_joint"/>
+    <jointactuatorfrc name="xls_torque_br" joint="back_right_wheel_rolling_joint"/>
+    <jointactuatorfrc name="xls_torque_bl" joint="back_left_wheel_rolling_joint"/>
+  </sensor>
+  <actuator>
+    <motor name="front_right_wheel_rolling_joint" joint="front_right_wheel_rolling_joint" ctrlrange="-10 10"/>
+    <motor name="front_left_wheel_rolling_joint" joint="front_left_wheel_rolling_joint" ctrlrange="-10 10"/>
+    <motor name="back_right_wheel_rolling_joint" joint="back_right_wheel_rolling_joint" ctrlrange="-10 10"/>
+    <motor name="back_left_wheel_rolling_joint" joint="back_left_wheel_rolling_joint" ctrlrange="-10 10"/>
+  </actuator>
+</mujoco>
