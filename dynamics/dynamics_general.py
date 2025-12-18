@@ -107,7 +107,7 @@ def newton_euler_dynamics(DH_params, CoM, masses, inertias, g, q, qd, qdd, T_ee,
     n_torque[0] = R @ n_torque[1] + np.cross(p, R @ f[1])
     return tau
 
-def compute_dynamics(DH_params, masses, inertias, g, q, qd):
+def compute_dynamics(MDH_params, masses, inertias, g, q, qd):
     """
     Computes the Inertia Matrix (M), Gravity Vector (G), and Coriolis Matrix (C) for a manipulator.
 
@@ -124,7 +124,7 @@ def compute_dynamics(DH_params, masses, inertias, g, q, qd):
         G (np.array): Gravity vector (n,).
         C (np.array): Coriolis matrix (n x n).
     """
-    n = len(DH_params)  # Number of joints
+    n = len(MDH_params)  # Number of joints
     z0 = np.array([0, 0, 1])  # Z-axis in base frame， 所有关节的转轴在关节坐标系下的转轴为z轴
 
     # Transformation matrices and Jacobians
@@ -135,7 +135,7 @@ def compute_dynamics(DH_params, masses, inertias, g, q, qd):
     # Forward kinematics to compute T and Jacobians
     for i in range(n):
         # Extract DH parameters
-        a, alpha, d, theta = DH_params[i]['a'], DH_params[i]['alpha'], DH_params[i]['d'], DH_params[i]['theta']
+        a, alpha, d, theta = MDH_params[i]['a'], MDH_params[i]['alpha'], MDH_params[i]['d'], MDH_params[i]['theta']
         theta += q[i]  # Add joint position
 
         # Compute transformation matrix
@@ -155,15 +155,15 @@ def compute_dynamics(DH_params, masses, inertias, g, q, qd):
         Jv_i = np.zeros((n, 3))
         Jw_i = np.zeros((n, 3))
         for j in range(i + 1):
-            R_prev = T[j][:3, :3]
-            p_prev = T[j][:3, 3]
+            R_prev = T[j+1][:3, :3]
+            p_prev = T[j+1][:3, 3] 
             z_prev = R_prev @ z0
 
             if j < i:
                 Jv_i[j, :] = np.cross(z_prev, p - p_prev)
                 Jw_i[j, :] = z_prev
             else:
-                Jv_i[j, :] = z_prev
+                Jw_i[j, :] = z_prev
 
         Jv_i = np.array(Jv_i).T
         Jw_i = np.array(Jw_i).T
