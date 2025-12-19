@@ -1,14 +1,17 @@
 import casadi as ca
 import numpy as np
 
-# here is version using casadi to describe the fk model of piper
-# piper的dh矩阵和general的不一致
+# here is version using casadi to describe the fk model of MDH description
 
 class Arm_FK():
     def __init__(self, nq, dh_list = None):
         self.nq = nq
         self.DH_list = dh_list
+        self.theta_list = None
         self.q = ca.SX.sym("theta", self.nq)
+
+    def set_theta_list(self, theta_list):
+        self.theta_list = theta_list
 
     def set_DH(self, dh_list):
         assert len(dh_list) == self.nq
@@ -137,10 +140,62 @@ class Arm_FK():
 
         return q1[3] * q2[:3] - q2[3] * q1[:3] + sx_matrix @ q1[:3]
 
+    def compute_jacobian(self, q, T_ee):
+        z0 = np.array([0, 0, 1])  # Z-axis in base frame， 所有关节的转轴在关节坐标系下的转轴为z轴
+
+        # Transformation matrices and Jacobians
+        T = [np.eye(4)]  # Transformation matrices
+        Jv = []  # Linear velocity Jacobians
+        Jw = []  # Angular velocity Jacobians
+
+        J_ee = np.zeros((6, self.nq))
+
+        # Forward kinematics to compute T and Jacobians
+        for i in range(self.nq):
+            # Extract DH parameters
+            theta = q[i] + self.theta_list[i]  # Add joint position
+
+            # Compute transformation matrix
+            T_i = self.computeTij(self.DH_list[i], theta)
+            T.append(T[-1] @ T_i)              # 关节在机械臂基坐标系的位姿
+
+            # Extract rotation matrix and position
+            R = T[-1][:3, :3]
+            p = T[-1][:3, 3]
+            T_ee_base = T[-1] @ T_ee
+            R_ee = T_ee_base[:3, :3]
+            p_ee = T_ee_base[:3, 3]
+
+            # Compute Jacobians
+            Jv_i = np.zeros((self.nq, 3))
+            Jw_i = np.zeros((self.nq, 3))
+            for j in range(i + 1):
+                R_prev = T[j+1][:3, :3]
+                p_prev = T[j+1][:3, 3]
+                z_prev = R_prev @ z0
+
+                if j < i:
+                    Jv_i[j, :] = np.cross(z_prev, p - p_prev)
+                    Jw_i[j, :] = z_prev
+                else:
+                    Jw_i[j, :] = z_prev
+
+                if i == self.nq - 1:
+                    J_ee[:3, j] = np.cross(z_prev, p_ee - p_prev)
+                    J_ee[3:, j] = z_prev
+
+            Jv_i = np.array(Jv_i).T
+            Jw_i = np.array(Jw_i).T
+            Jv.append(Jv_i)
+            Jw.append(Jw_i)
+        return J_ee
+
 if __name__ == "__main__":
-    MDH_list = [[0., 0., 0.], [0., 1., 0.]]
-    fk = Arm_FK(2, MDH_list)
+    MDH_list = [[0., 0., 0.], [0., 1., 0.], [0., 1., 0.]]
+    fk = Arm_FK(3, MDH_list)
     T = np.eye(4)
     T[0, 3] = 1.
-    lj = fk.forward_compute([np.pi/4, np.pi/4])
+    lj = fk.forward_compute([np.pi/6, np.pi/6, np.pi/6])
     print(lj @ T)
+    fk.set_theta_list([0., 0., 0.])
+    print(fk.compute_jacobian([np.pi/6, np.pi/6, np.pi/6], T))

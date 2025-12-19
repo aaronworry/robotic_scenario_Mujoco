@@ -156,7 +156,7 @@ def compute_dynamics(MDH_params, masses, inertias, g, q, qd):
         Jw_i = np.zeros((n, 3))
         for j in range(i + 1):
             R_prev = T[j+1][:3, :3]
-            p_prev = T[j+1][:3, 3] 
+            p_prev = T[j+1][:3, 3]
             z_prev = R_prev @ z0
 
             if j < i:
