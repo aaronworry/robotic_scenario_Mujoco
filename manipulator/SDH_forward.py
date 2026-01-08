@@ -30,18 +30,6 @@ class Arm_FK():
             T = T @ Ti
         return T
 
-    def ca_forward(self, idx):
-        """
-
-        :return: the casadi.Fuction of forward
-        """
-        T = ca.DM.eye(4)
-        assert 1 <= idx <= self.nq
-        for i in range(idx):
-            Ti = self.buildTij(self.DH_list[i], self.q[i])
-            T = T @ Ti
-        return ca.Function("arm_fk", [self.q], [T])
-
     def forward(self, q, idx):
         """
         :return: the ca of forward
@@ -51,7 +39,7 @@ class Arm_FK():
         for i in range(idx):
             Ti = self.buildTij(self.DH_list[i], q[i] + self.theta_list[i])
             T = T @ Ti
-        return T[3, :3], T[:3, :3]
+        return T
 
     def buildTij(self, dh, q_ca):
         # 后续考虑将dh替换为ca符号

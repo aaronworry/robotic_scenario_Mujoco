@@ -9,6 +9,7 @@ class Arm_FK():
         self.DH_list = dh_list
         self.theta_list = np.array([0.] * self.nq)
         self.q = ca.SX.sym("theta", self.nq)
+        self.theta_list_ca = ca.SX.sym("init_theta", self.nq)
 
     def set_theta_list(self, theta_list):
         self.theta_list = theta_list
@@ -30,38 +31,27 @@ class Arm_FK():
             T = T @ Ti
         return T
 
-    def ca_forward(self, idx):
-        """
-
-        :return: the casadi.Fuction of forward
-        """
-        T = ca.DM.eye(4)
-        assert 1 <= idx <= self.nq
-        for i in range(idx):
-            Ti = self.buildTij(self.DH_list[i], self.q[i])
-            T = T @ Ti
-        return ca.Function("arm_fk", [self.q], [T])
-
-    def forward(self, q, idx):
+    def forward(self, q, theta_list, idx):
         """
         :return: the ca of forward
         """
         T = ca.DM.eye(4)
         assert 1 <= idx <= self.nq
         for i in range(idx):
-            Ti = self.buildTij(self.DH_list[i], q[i] + self.theta_list[i])
-            T = T @ Ti
-        return T[3, :3], T[:3, :3]
+            Ti = self.buildTij(self.DH_list[i], q[i] + theta_list[i])
+            T = ca.mtimes(T, Ti)
+        return T
 
     def buildTij(self, dh, q_ca):
         # 后续考虑将dh替换为ca符号
         alpha, a, d = dh[0], dh[1], dh[2]
 
-        T = ca.vertcat(
-            ca.horzcat(ca.cos(q_ca), -ca.sin(q_ca), 0, a),
-            ca.horzcat(ca.sin(q_ca) * ca.cos(alpha), ca.cos(q_ca) * ca.cos(alpha), -ca.sin(alpha), -d * ca.sin(alpha)),
-            ca.horzcat(ca.sin(q_ca) * ca.sin(alpha), ca.cos(q_ca) * ca.sin(alpha), ca.cos(alpha), d * ca.cos(alpha)),
-            ca.horzcat(0, 0, 0, 1))
+        T = ca.blockcat([
+            [ca.cos(q_ca), -ca.sin(q_ca), 0, a],
+            [ca.sin(q_ca) * ca.cos(alpha), ca.cos(q_ca) * ca.cos(alpha), -ca.sin(alpha), -d * ca.sin(alpha)],
+            [ca.sin(q_ca) * ca.sin(alpha), ca.cos(q_ca) * ca.sin(alpha), ca.cos(alpha), d * ca.cos(alpha)],
+            [0, 0, 0, 1]
+        ])
 
         return T
 
