@@ -5,7 +5,7 @@ import casadi as ca
 
 
 class BaseArmMPC():
-    def __init__(self, dt, N, W_pose, W_u, W_du, dh_params, T_des):
+    def __init__(self, dt, N, W_pose, W_u, W_du, dh_params):
         self.dt = dt            # 0.005 s  对应piper控制频率
         self.N = N
 
@@ -18,11 +18,11 @@ class BaseArmMPC():
         self.nv = self.nq
 
         self.dh_params = dh_params
-        self.T_des = T_des
 
         # 符号变量定义 (核心！MPC的优化变量和状态变量)
         self.q = ca.SX.sym('q', self.nq)        # 当前关节角度 (状态量)
         self.dq = ca.SX.sym('dq', self.nv)      # 关节速度 (控制量)
+        self.T_ref = ca.SX.sym('T_ref', 4, 4)
 
         # 声明MPC优化变量：预测时域内的所有关节速度，形状 (N*n_joint, 1)
         self.U = ca.SX.sym('U', self.N * self.nv)
@@ -30,6 +30,8 @@ class BaseArmMPC():
         self.forward = ca.Function('T', [self.q], [self.mdh_forward(self.q)])
 
 
+    def set_T_des(self, T):
+        self.T_des = T
 
     def mdh_forward(self, q):
         T = ca.DM.eye(4)
@@ -135,7 +137,7 @@ class BaseArmMPC():
 
             # ② 计算当前末端位姿和位姿误差
             T_current = self.mdh_forward(q_current)
-            e = self.pose_error(T_current, self.T_des)
+            e = self.pose_error(T_current, self.T_ref)
 
             # ③ 累加代价函数：位姿跟踪误差 + 控制量平滑性约束
             cost += ca.mtimes([e.T, self.W_pose, e])          # 核心：位姿跟踪代价
@@ -164,7 +166,7 @@ class BaseArmMPC():
             'x': self.U,          # 优化变量：N步关节速度
             'f': cost,       # 代价函数
             'g': ca.vertcat(*self.g),  # 约束向量
-            'p': self.q           # 优化问题参数：当前关节角度（每次滚动更新）
+            'p': ca.vertcat(self.q, ca.vec(self.T_ref))           # 优化问题参数：当前关节角度（每次滚动更新）, 目标姿态
         }
 
         # 选择求解器：IPOPT（工业级非线性规划求解器，CasADi原生支持，无梯度消失）
@@ -179,7 +181,7 @@ class BaseArmMPC():
 
 
 
-    def solve_ee(self, q_current):
+    def solve_ee(self, q_current, T_des):
         # 优化变量初始值：全零速度，加快收敛
         U0 = np.zeros(self.N * self.nv)
 
@@ -188,7 +190,7 @@ class BaseArmMPC():
             x0=U0,
             lbx=-np.inf, ubx=np.inf,
             lbg=self.g_lb, ubg=self.g_ub,
-            p=q_current
+            p=np.concatenate([q_current, T_des.flatten(order = 'F')])
         )
 
         # 提取最优解：仅执行第一步关节速度（MPC核心：滚动时域，只取第一步）
@@ -217,7 +219,7 @@ if __name__ == "__main__":
 
 
 
-    mpc = BaseArmMPC(0.05, 10, W_pose, W_u, W_du, mdh_params, T_des)
+    mpc = BaseArmMPC(0.05, 10, W_pose, W_u, W_du, mdh_params)
     mpc.construct_opti_ee(q_min, q_max, dq_min, dq_max)
 
     q_np = np.zeros(6)
@@ -226,7 +228,7 @@ if __name__ == "__main__":
     print("开始机械臂末端位姿MPC跟踪控制...")
     for step in range(n_steps):
         # 1. 调用MPC控制器，得到最优关节速度
-        dq_np = mpc.solve_ee(q_np)
+        dq_np = mpc.solve_ee(q_np, T_des)
 
         # 2. 执行控制：更新关节角度（实际机械臂中替换为关节驱动）
         q_np = q_np + dq_np * 0.05
