@@ -3,29 +3,25 @@ import casadi as ca
 import os
 
 class Arm_ik():
-    def __init__(self, dh_params, q_min, q_max):
-        self.dh_params = dh_params
+    def __init__(self, zero_SE3_list, axis_list, q_min, q_max):
+        self.zero_SE3_list = zero_SE3_list
+        self.axis_list = axis_list
         self.q_min = q_min
         self.q_max = q_max
-        self.nq = len(self.dh_params)
+        self.nq = len(self.zero_SE3_list)
 
-    def mdh_forward(self, q):
+    def forward(self, q):
         T = ca.DM.eye(4)
         i = 0
-        for alpha, a, d, theta_zero in self.dh_params:
-            T_dh = ca.blockcat([
-                [ca.cos(q[i] + theta_zero), -ca.sin(q[i] + theta_zero), 0, a],
-                [ca.sin(q[i] + theta_zero) * ca.cos(alpha), ca.cos(q[i] + theta_zero) * ca.cos(alpha), -ca.sin(alpha), -d * ca.sin(alpha)],
-                [ca.sin(q[i] + theta_zero) * ca.sin(alpha), ca.cos(q[i] + theta_zero) * ca.sin(alpha), ca.cos(alpha), d * ca.cos(alpha)],
-                [0, 0, 0, 1]
-            ])
+        for SE3 in self.zero_SE3_list:
+            T_dh = ca.mtimes(ca.DM(SE3), self.matrixexp3(q[i], ca.SX(self.axis_list[i])))
             T = ca.mtimes(T, T_dh)
             i += 1
         return T
 
     def compute_T_ee(self, q_value):
         q_ca = ca.SX.sym("q_ca", self.nq)
-        func = ca.Function("compute_ee", [q_ca], [self.mdh_forward(q_ca)])
+        func = ca.Function("compute_ee", [q_ca], [self.forward(q_ca)])
         return func(q_value)
 
     def matrixlog3(self, SO3):
@@ -44,7 +40,7 @@ class Arm_ik():
         omega1 = (1.0 / ca.sqrt(2 * (1 + SO3[2,2]))) * ca.vertcat(SO3[0,2], SO3[1,2], 1 + SO3[2,2])
         omega2 = (1.0 / ca.sqrt(2 * (1 + SO3[1,1]))) * ca.vertcat(SO3[0,1], 1 + SO3[1,1], SO3[2,1])
         omega3 = (1.0 / ca.sqrt(2 * (1 + SO3[0,0]))) * ca.vertcat(1 + SO3[0,0], SO3[1,0], SO3[2,0])
-        # 嵌套if_else 实现原代码的 elif 判断逻辑
+
         omega_pi = ca.if_else(ca.fabs(1 + SO3[2,2]) > 1e-6, omega1,
                     ca.if_else(ca.fabs(1 + SO3[1,1]) > 1e-6, omega2, omega3))
         pi_vec = ca.pi * omega_pi
@@ -55,13 +51,36 @@ class Arm_ik():
         # 提取反对称矩阵的李代数向量：[so3[2,1], so3[0,2], so3[1,0]] 索引和原代码一致
         normal_vec = ca.vertcat(so3_mat[2,1], so3_mat[0,2], so3_mat[1,0])
 
-        # ========== CasADi 符号条件分支整合（核心替换python原生if/elif/else） ==========
         res = ca.if_else(acosinput >= 1.0, zero_vec, ca.if_else(acosinput <= -1.0, pi_vec, normal_vec))
 
         return res
 
+    def matrixexp3(self, theta, axis):
+        # 构造旋转轴的反对称矩阵
+        skew_symmetric = ca.vertcat(
+            ca.horzcat(0, -axis[2], axis[1]),
+            ca.horzcat(axis[2], 0, -axis[0]),
+            ca.horzcat(-axis[1], axis[0], 0)
+        )
+
+        # 罗德里格斯公式核心计算
+        I = ca.DM.eye(3)
+        R = I + ca.sin(theta) * skew_symmetric + (1 - ca.cos(theta)) * skew_symmetric @ skew_symmetric
+
+        T = ca.blockcat([
+                [R[0, 0], R[0, 1], R[0, 2], 0],
+                [R[1, 0], R[1, 1], R[1, 2], 0],
+                [R[2, 0], R[2, 1], R[2, 2], 0],
+                [0, 0, 0, 1]
+            ])
+
+        # 数值稳定性：θ趋近于0时直接返回单位矩阵，避免分母为0
+        res = ca.if_else(ca.fabs(theta) <= 1e-8, ca.DM.eye(4), T)
+        return res
+
+
     def pose_error(self, q, T_tar):
-        T_cur = self.mdh_forward(q)
+        T_cur = self.forward(q)
         p_c = T_cur[:3, 3]
         p_d = T_tar[:3, 3]
         R_c = T_cur[:3, :3]
@@ -180,22 +199,4 @@ class Arm_ik():
             dof[:len(sol_q)] = self.init_data
 
             raise e
-
-
-if __name__ == "__main__":
-    q_min = np.array([-2.618, 0., -2.967, -1.745, -1.32, -2.094])
-    q_max = np.array([2.618, 3.14, 0., 1.745, 1.32, 2.094])
-    mdh_params = [[0., 0., 0.123, 0.], [-np.pi/2, 0., 0., -np.pi * 174.22 / 180], [0., 0.285, 0., -100.78 / 180 * np.pi], [np.pi/2, -0.022, 0.25, 0.], [-np.pi/2, 0., 0., 0.], [np.pi/2, 0., 0.091, 0.]]
-    arm = Arm_ik(mdh_params, q_min, q_max)
-    arm.createSolver()
-    theta = np.pi
-    tf = np.array([
-            [1, 0, 0, 0.2],
-            [0, np.cos(theta), -np.sin(theta), 0.0],
-            [0, np.sin(theta), np.cos(theta), 0.3],
-            [0, 0, 0, 1]
-        ])
-    dof = arm.ik(tf)
-    print(f"DoF: {dof}")
-    print(arm.compute_T_ee(dof))
 
